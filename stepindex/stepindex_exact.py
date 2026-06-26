@@ -835,8 +835,8 @@ class StepIndexExact:
                 rec = Circle(ctr, rad)
                 r = rec.roots(lambda Y: eval(g),
                               lambda Y: eval(dg),
-                              rootErrTol=1.e-10,
-                              newtonStepTol=1.e-14)
+                              root_err_tol=1.e-10,
+                              newton_step_tol=1.e-14)
                 roots += [r]
         return roots
 
@@ -967,8 +967,9 @@ class StepIndexExact:
 
         fig = plt.figure()
         ax = fig.add_subplot()
-        ax.axis('equal')
-        ax.set(xlim=(-1.5 * a, 1.5 * a), ylim=(-1.5 * a, 1.5 * a))
+        ax.set_aspect('equal')
+        ax.set_xlim(-1.5 * a, 1.5 * a)
+        ax.set_ylim(-1.5 * a, 1.5 * a)
         if real:
             rep = 'real'
             U = Ex.real
