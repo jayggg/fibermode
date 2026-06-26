@@ -8,9 +8,8 @@ import netgen.geom2d as geom2d
 import ngsolve as ng
 import numpy as np
 from pyeigfeast.spectralproj.ngs import NGvecs
-from fiberamp.fiber.modesolver import ModeSolver
-from fiberamp.fiber import sellmeier
-import pickle
+from fibermode.solvers import ModeSolver
+from fibermode.utilities import sellmeier
 
 
 class ARF(ModeSolver):

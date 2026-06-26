@@ -19,7 +19,7 @@ from scipy.special import jv, jvp, h1vp, h2vp, yv, yvp
 from scipy.special import hankel1 as h1
 from scipy.special import hankel2 as h2
 
-from fiberamp.fiber.microstruct.bragg.utilities import r, theta, Jv, Yv, \
+from .utilities import r, theta, Jv, Yv, \
     Hankel1, Hankel2, Jvp, Yvp, Hankel1p, Hankel2p
 
 
