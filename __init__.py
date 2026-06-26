@@ -2,7 +2,7 @@ __all__ = [
     'StepIndexExact', 'named_stepindex_fibers', 'StepIndex',
     'ModeSolver', 'BPM',
     'ARF', 'NANF', 'PBG',
-    'Bragg', 'BraggExact', 'BraggScalar',
+    'Bragg', 'BraggExactScalar', 'BraggExactVector',
 ]
 
 from .stepindex import StepIndexExact, StepIndex
@@ -11,4 +11,4 @@ from .solvers import ModeSolver, BPM
 from .arf import ARF
 from .nanf import NANF
 from .pbg import PBG
-from .bragg import Bragg, BraggExact, BraggScalar
+from .bragg import Bragg, BraggExactScalar, BraggExactVector
