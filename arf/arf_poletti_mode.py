@@ -26,9 +26,6 @@ print('POLY PML' + '-'*60)
 z, y, yl, beta, P, _ = a.leakymode(**solverparams)
 y.draw()
 
-# Save results and a dict of solver paramaters
-a.savemodes('tmp_arf_LP01', y, p, beta, z, solverparams, arfpickle=True)
-
 # Try other solvers, like the standard PML & linear eig:
 print('SMOOTH PML' + '-'*60)
 z2, yy, yyl, beta2, P2 = \

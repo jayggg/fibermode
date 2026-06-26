@@ -10,7 +10,6 @@ import numpy as np
 from pyeigfeast.spectralproj.ngs import NGvecs
 from fiberamp.fiber.modesolver import ModeSolver
 from fiberamp.fiber import sellmeier
-import os
 import pickle
 
 
@@ -226,11 +225,6 @@ class ARF(ModeSolver):
         n0 = self.indexdict['Outer']
         super().__init__(self.mesh, L, n0)
 
-        # OUTPUT LOCATION
-
-        self.outfolder = './outputs'
-        if os.path.isdir(self.outfolder) is not True:
-            os.mkdir(self.outfolder)
 
     @classmethod
     def from_dict(cls, d):
@@ -784,84 +778,3 @@ class ARF(ModeSolver):
     def curve(self, curve=3):
         self.mesh.Curve(curve)
 
-    # SAVE & LOAD #####################################################
-
-    def save(self, fileprefix):
-        """ Save this object so it can be loaded later """
-
-        arffilename = os.path.abspath(self.outfolder+'/'+fileprefix+'_arf.pkl')
-        os.makedirs(os.path.dirname(arffilename), exist_ok=True)
-        print('Pickling ARF object into ', arffilename)
-        with open(arffilename, 'wb') as f:
-            pickle.dump(self, f)
-
-    def savemodes(self, fileprefix, Y, p, betas, Zs,
-                  solverparams, longY=None, longYl=None, arfpickle=False):
-        """
-        Save a NGVec span object Y containing modes of FE degree p.
-        Include any solver paramaters to be saved together with the
-        modes in the input dictionary "solverparams". If "arfpickle"
-        is True, then the arf object is also saved under the same "fileprefix".
-        """
-
-        if arfpickle:
-            self.save(fileprefix)
-        y = Y.tonumpy()
-        if longY is not None:
-            longY = longY.tonumpy()
-        if longYl is not None:
-            longYl = longYl.tonumpy()
-        d = {'y': y, 'p': p, 'betas': betas, 'Zs': Zs,
-             'longy': longY, 'longyl': longYl}
-        d.update(**solverparams)
-
-        f = os.path.abspath(self.outfolder+'/'+fileprefix+'_mde.npz')
-        print('Writing mode file ', f)
-        np.savez(f, **d)
-
-# LOAD FROM FILE #####################################################
-
-
-def loadarf(fileprefix):
-    """ Load a saved ARF object from file <fileprefix>_arf.pkl """
-
-    arffile = os.path.abspath(fileprefix+'_arf.pkl')
-    with open(arffile, 'rb') as f:
-        a = pickle.load(f)
-    return a
-
-
-def loadarfmode(modenpzf, arffprefix):
-    """  Load a mode saved in npz file <modenpzf> compatible with the
-    ARF object saved in pickle file <arffprefix>_arf.pkl. """
-
-    a = loadarf(arffprefix)
-    modef = os.path.abspath(modenpzf)
-    d = dict(np.load(modef, allow_pickle=True))
-    p = int(d.pop('p'))
-    betas = d.pop('betas')
-    Zs = d.pop('Zs')
-    y = d.pop('y')
-    for k, v in d.items():
-        if v.ndim > 0:
-            d[k] = v
-        else:  # convert singleton arrays to scalars
-            d[k] = v.item()
-    print('  Degree %d modes found in file %s' % (p, modenpzf))
-    X = ng.H1(a.mesh, order=p, complex=True)
-    X3 = ng.FESpace([X, X, X])
-    Y = NGvecs(X, y.shape[1])
-    Y.fromnumpy(y)
-    longY = None
-    longYl = None
-    longy = d['longy']
-    longyl = d['longyl']
-
-    if longy is not None:
-        longY = NGvecs(X3, longy.shape[1])
-        longY.fromnumpy(longy)
-    if longyl is not None:
-        longYl = NGvecs(X3, longyl.shape[1])
-        longYl.fromnumpy(longyl)
-
-    return a, Y, betas, Zs, p, d, longY, longYl

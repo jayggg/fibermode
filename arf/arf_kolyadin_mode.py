@@ -39,18 +39,3 @@ if __name__ == '__main__':
 
     Ys[-1].draw()  # visualize in netgen window
 
-    # save the modes to file
-    modenames = ['LP01', 'LP11', 'LP21', 'LP02']
-    fileprefixes = ['tmp_arf{0}_p{1}'.format(name, p) for name in modenames]
-
-    for k in range(len(modenames)):
-        # Pickle the arf object and save the mode information to a numpy
-        # archive file.
-        solverparams = {'method': 'polyeig', 'Zs': (Zs[k],),
-                        'name': modenames[k]}
-        a.savemodes(fileprefixes[k], Ys[k], p, (betas[k],), (Zs[k],),
-                    solverparams, arfpickle=True)
-
-        # Save the real part, imaginary part, and intensities of the
-        # grid functions in the Span object Ys.
-        a.savemodesvtk(fileprefixes[k], Ys[k], p)

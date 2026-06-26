@@ -30,8 +30,6 @@ exact_z = 1.957793326920255 - 0.18543240054910448j  # see docs/1.3
 print('Error in computed non-dimensional Z-resonance values:\n',
       abs(exact_z - z))
 
-fiber.savemodes('my_tmp_output', z, y)  # save & reload using loadmodes.py
-
 ################################################################
 # This uses a standard PML with smooth hand-made coefficients
 # (The complex transformation can be seen in the modesolver code.)

@@ -1,3 +1,3 @@
-__all__ = ["ARF", "loadarf", "loadarfmode"]
+__all__ = ["ARF"]
 
-from .arf import ARF, loadarf, loadarfmode
+from .arf import ARF
