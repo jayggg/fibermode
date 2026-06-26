@@ -1,13 +1,12 @@
 import ngsolve as ng
 import numpy as np
 from netgen.geom2d import SplineGeometry
-from ngsolve import H1, CF
+from ngsolve import H1, CF, dx
 import fibermode
 from fibermode.stepindex import StepIndexExact
 from fibermode.solvers import ModeSolver
 from pyeigfeast.spectralproj.ngs import NGvecs
 from pyeigfeast.spectralproj import splitzoom
-import os
 from scipy.sparse import coo_matrix
 
 
@@ -21,7 +20,6 @@ class StepIndex(ModeSolver):
             self,
             fibername=None,
             fiber=None,
-            fromfile=None,
             R=None,  # nondimensional cladding radius
             Rout=None,  # nondimensional outer radius
             geom=None,
@@ -34,8 +32,7 @@ class StepIndex(ModeSolver):
         To construct a StepIndex object (for numerical mode computations
         for a radially symmetric step-index fiber), either provide a
         predefined fiber object with name "fibername", or provide a
-        StepIndexExact fiber object "fiber", or a file to load saved
-        object in order to construct a StepIndex object, e.g.,
+        StepIndexExact fiber object "fiber", e.g.,
 
            StepIndex(fibername='Nufern_Yb', Rout=10, R=2)
 
@@ -61,41 +58,17 @@ class StepIndex(ModeSolver):
 
         """
 
-        self.outfolder = os.path.abspath(fibermode.__path__[0] + '/outputs/')
+        if fibername is None and fiber is None:
+            raise ValueError('Need either a fiber or fibername')
 
-        if fromfile is None:
-            if fibername is None and fiber is None:
-                raise ValueError('Need either a file or fiber or fibername')
-
-            self.makestepindex(fibername,
-                               fiber,
-                               R=R,
-                               Rout=Rout,
-                               geom=geom,
-                               h=h,
-                               hcore=hcore)
-            self.makemesh(refine, curveorder)
-        else:
-            fbmfilename = self.outfolder + '/' + fromfile + '_fbm.npz'
-            if os.path.isfile(fbmfilename):
-                self.loadstepindex(fbmfilename)
-            else:
-                print('Specified fibermode file not found -- creating it')
-                self.makestepindex(fromfile)
-                self.savefbm(fromfile)
-
-            meshfname = self.outfolder + '/' + fromfile + '_msh.vol.gz'
-            if os.path.isfile(meshfname):
-                if geom is None:
-                    self.setstepindexgeom()
-                else:
-                    self.geo = geom
-
-                self.loadmesh(meshfname, curveorder)
-            else:
-                print('Specified mesh file not found -- creating it')
-                self.makemesh(refine)
-                self.savemesh(fromfile)
+        self.makestepindex(fibername,
+                           fiber,
+                           R=R,
+                           Rout=Rout,
+                           geom=geom,
+                           h=h,
+                           hcore=hcore)
+        self.makemesh(refine, curveorder)
 
         self.p = None  # degree of finite elements used in mode calc
         self.a = None
@@ -222,26 +195,6 @@ class StepIndex(ModeSolver):
         mesh.Curve(curveorder)
         ng.Draw(mesh)
         self.mesh = mesh
-
-    def loadstepindex(self, fbmfilename):
-        print('Loading StepIndex object from file ', fbmfilename)
-        f = np.load(fbmfilename)
-        self.fibername = str(f['fibername'])
-        self.hcore = float(f['hcore'])
-        self.hclad = float(f['hclad'])
-        self.hpml = float(f['hpml'])
-        self.R = float(f['R'])
-        self.Rout = float(f['Rout'])
-
-        self.fiber = StepIndexExact(self.fibername)
-        self.setstepindexgeom()  # sets self.geo
-
-    def loadmesh(self, meshfname, curveorder=3):
-        print('Loading mesh from file ', meshfname)
-        self.mesh = ng.Mesh(meshfname)
-        self.mesh.ngmesh.SetGeometry(self.geo)
-        self.mesh.Curve(curveorder)
-        ng.Draw(self.mesh)
 
     def setstepindexgeom(self):
         geo = SplineGeometry()
@@ -496,6 +449,25 @@ class StepIndex(ModeSolver):
         name2ind, exact = construct_names(V, betas)
         return name2ind, exact
 
+    def corefraction(self, efs):
+        """
+        INPUT: "efs" multidimensional gridfunction with eigenmodes.
+        OUTPUT: "cfs" list of fractions of energy in the core for each mode
+                (where energy of mode u is measured via integral of |u|²).
+        """
+        cfs = []
+
+        for i in range(len(efs.vecs)):
+            total_energy = ng.Integrate(
+                ng.InnerProduct(efs.MDComponent(i), efs.MDComponent(i)) *
+                dx, self.mesh).real
+            core_energy = ng.Integrate(
+                ng.InnerProduct(efs.MDComponent(i), efs.MDComponent(i)) *
+                dx("core"), self.mesh).real
+            cfs.append(core_energy / total_energy)
+
+        return cfs
+
     # INTERPOLATED MODES ####################################################
 
     def interpmodes(self, p):
@@ -592,186 +564,7 @@ class StepIndex(ModeSolver):
         B = B.tocsr()[freedofs, :]
         return A, B, freedofs
 
-    # SAVING & LOADING ######################################################
-    #
-    # File naming conventions:
-    #  * File output sets are classified by a prefix name <prefix>
-    #  * StepIndex object saved in file: <prefix>_fbm.npz
-    #  * Mesh saved in file:             <prefix>_msh.vol.gz
-    #  * Modes saved in file(s):         <prefix>_mde.npz for Feast modes
-    #                       or           <prefix>_imde.npz for interp modes
-    #
-
-    def savefbm(self, fileprefix):
-        """ Save this object so it can be loaded later """
-
-        if os.path.isdir(self.outfolder) is not True:
-            os.mkdir(self.outfolder)
-        fbmfilename = self.outfolder + '/' + fileprefix + '_fbm.npz'
-        print('Writing StepIndex object into:\n', fbmfilename)
-        np.savez(fbmfilename,
-                 fibername=self.fibername,
-                 hcore=self.hcore,
-                 hclad=self.hclad,
-                 hpml=self.hpml,
-                 R=self.R,
-                 Rout=self.Rout)
-
-    def savemesh(self, fileprefix):
-
-        meshfname = self.outfolder + '/' + fileprefix + '_msh.vol.gz'
-        print('Writing mesh into:\n', meshfname)
-        self.mesh.ngmesh.Save(meshfname)
-
-    def savemodes(self,
-                  fileprefix,
-                  betas,
-                  Y,
-                  saveallagain=True,
-                  name2ind=None,
-                  exact=None,
-                  interp=False):
-        """ Convert Y to numpy and save in npz format. """
-
-        if saveallagain:
-            self.savefbm(fileprefix)
-            self.savemesh(fileprefix)
-
-        y = Y.tonumpy()
-
-        if os.path.isdir(self.outfolder) is not True:
-            os.mkdir(self.outfolder)
-        suffix = '_imde.npz' if interp else '_mde.npz'
-        fullname = self.outfolder + '/' + fileprefix + suffix
-        print('Writing modes into:\n', fullname)
-        np.savez(fullname,
-                 fibername=self.fibername,
-                 hcore=self.hcore,
-                 hclad=self.hclad,
-                 hpml=self.hpml,
-                 p=self.p,
-                 R=self.R,
-                 Rout=self.Rout,
-                 betas=betas,
-                 y=y,
-                 exactbetas=exact,
-                 name2ind=name2ind)
-
-    def checkload(self, f):
-        """Check if the loaded file has expected values of certain data"""
-
-        for member in {'fibername', 'hcore', 'hclad', 'hpml', 'R', 'Rout'}:
-            print('  From file:', member, '=', f[member])
-            assert self.__dict__[member] == f[member], \
-                'Load error! Data member %s does not match!' % member
-
-    def loadmodes(self, modefile):
-        """Load modes from "outputs/modefile" (filename with extension)"""
-
-        fname = self.outfolder + '/' + modefile
-        if os.path.isfile(fname):
-            print('Loading modes from:\n ', fname)
-            f = np.load(fname, allow_pickle=True)
-            self.checkload(f)
-            self.p = int(f['p'])
-            print('  Degree %d modes found in file' % self.p)
-            self.X = H1(self.mesh,
-                        order=self.p,
-                        dirichlet='OuterCircle',
-                        complex=True)
-            y = f['y']
-            betas = f['betas']
-            n2i = f['name2ind'].item()
-            m = y.shape[0]
-            Y = NGvecs(self.X, m)
-            Y.fromnumpy(y)
-        else:
-            print('Specified modes file not found -- creating it')
-            fibername, p, interp = _extract_fbname_and_p(modefile)
-            if interp:
-                betas, n2i, Y = self.interpmodes(p=p)
-                self.savemodes(fibername + '_p' + str(p),
-                               betas,
-                               Y,
-                               saveallagain=False,
-                               name2ind=n2i,
-                               exact=betas,
-                               interp=True)
-            else:
-                betas, zsqrs, Y = self.guidedmodes(p=p, nspan=50)
-                n2i, exbeta = self.name2indices(betas, maxl=9)
-                self.savemodes(fibername + '_p' + str(p),
-                               betas,
-                               Y,
-                               saveallagain=False,
-                               name2ind=n2i,
-                               exact=exbeta)
-        return betas, Y, n2i
-
-    def makeguidedmodelibrary(self,
-                              maxp=5,
-                              maxl=9,
-                              delta=None,
-                              nspan=15,
-                              interp=False):
-        """Save full sets of guided modes computed using the same mesh, using
-        polynomial degrees p from 1 to "maxp", together with their LP
-        names. One modefile per p is written and all output filenames
-        are prefixed with fiber's name. (Remaining optional arguments
-        are passed to name2indices(..), where they are also documented.)
-        """
-
-        fprefix = self.fibername
-        self.savefbm(fprefix)  # save StepIndex object
-        self.savemesh(fprefix)  # save mesh
-
-        for p in range(1, maxp + 1):  # save modes, one file per degree
-            if interp:
-                betas, n2i, Y = self.interpmodes(p=p)
-                print('Physical propagation constants:\n', betas)
-                self.savemodes(fprefix + '_p' + str(p),
-                               betas,
-                               Y,
-                               saveallagain=False,
-                               name2ind=n2i,
-                               exact=betas,
-                               interp=True)
-            else:
-                betas, zsqrs, Y = self.guidedmodes(p=p, nspan=nspan)
-                print('Physical propagation constants:\n', betas)
-                print('Computed non-dimensional Z-squared values:\n', zsqrs)
-                n2i, exbeta = self.name2indices(betas, maxl=maxl, delta=delta)
-                self.savemodes(fprefix + '_p' + str(p),
-                               betas,
-                               Y,
-                               saveallagain=False,
-                               name2ind=n2i,
-                               exact=exbeta)
-
 
 # END OF CLASS DEFINITION ###################################################
-
-# Helper methods
-
-
-def _extract_fbname_and_p(fn):
-    """
-    Extract the fibername, polynomial order and mode type
-    from a mode filename
-    """
-    pfx = None
-    sfxs = ['_mde.npz', '_imde.npz']
-    for sfx in sfxs:
-        if sfx in fn:
-            pfx = fn[:fn.find(sfx)]
-            break
-    if pfx is None:
-        return None
-    parts = pfx.split('_')
-    fibername = '_'.join(parts[:-1])
-    p = int(parts[-1][1:])
-    interp = (sfx == sfxs[1])
-    return fibername, p, interp
-
 
 # MODULE END #############################################################
