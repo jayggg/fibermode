@@ -2,15 +2,12 @@
 Run semi-analytical root finder for guided vector (Maxwell) modes of
 a radially symmetric step-index fiber.
 
-(Ensure matplotlib is installed and use "python thisfilename.py" to
+(Ensure matplotlib is installed and use "python3 thisfilename.py" to
 visualize vector modes.)
 """
 
-import warnings
-import logging
 from fibermode import StepIndexExact
-
-logging.getLogger('matplotlib.axes._base').setLevel(logging.ERROR)
+import warnings
 
 f = StepIndexExact('Nufern_Yb')
 
