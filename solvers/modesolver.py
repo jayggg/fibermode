@@ -2565,6 +2565,158 @@ class ModeSolver:
             ee += eta_i
         return ee
 
+    def leakymode_adapt_gen(self,
+                            p,
+                            radiusZ2=0.1,
+                            centerZ2=4,
+                            maxndofs=200000,
+                            pmlbegin=None,
+                            pmlend=None,
+                            alpha=10,
+                            npts=4,
+                            nspan=5,
+                            seed=1,
+                            within=None,
+                            rhoinv=0.0,
+                            quadrule='circ_trapez_shift',
+                            inverse='umfpack',
+                            trustme=False,
+                            verbose=True,
+                            **feastkwargs):
+        """
+        Generator version of leakymode_adapt.  Yields the state dict
+
+            {'ndof': int, 'zsqr': array, 'ee': array, 'eevis': GridFunction,
+             'Yr': NGvecs, 'Yl': NGvecs, 'Zsqrs': list, 'ndofs': list}
+
+        after each Solve→Estimate step (before Mark→Refine), so the caller
+        can draw or inspect intermediate results.  When the loop ends the
+        generator returns the same tuple as leakymode_adapt:
+
+            Zsqrs, ndofs, Yr, Yl, beta, P
+
+        Typical notebook usage:
+
+            stepper = bragg_n.leakymode_adapt_gen(p=2, ...)
+            try:
+                state = next(stepper)
+                Draw(state['eevis'])
+            except StopIteration as done:
+                Zsqrs, ndofs, Yr, Yl, beta, P = done.value
+        """
+
+        ndofs = [0]
+        Zsqrs = []
+        eevis = ng.GridFunction(ng.L2(self.mesh, order=0, autoupdate=True),
+                                name='estimator',
+                                autoupdate=True)
+
+        while ndofs[-1] < maxndofs:  # ADAPTIVITY LOOP ------------------
+
+            a, b, X = self.smoothpmlsystem(p,
+                                           alpha=alpha,
+                                           autoupdate=True,
+                                           pmlbegin=pmlbegin,
+                                           pmlend=pmlend)
+            Yr = NGvecs(X, nspan)
+            Yl = NGvecs(X, nspan)
+            Yr.setrandom(seed=seed)
+            Yl.setrandom(seed=seed)
+
+            # 1. SOLVE
+
+            with ng.TaskManager():
+                try:
+                    a.Assemble()
+                    b.Assemble()
+                except Exception:
+                    print('*** Trying again with larger heap')
+                    ng.SetHeapSize(int(1e9))
+                    a.Assemble()
+                    b.Assemble()
+
+            P = SpectralProjNG(X,
+                               a.mat,
+                               b.mat,
+                               radius=radiusZ2,
+                               center=centerZ2,
+                               npts=npts,
+                               within=within,
+                               rhoinv=rhoinv,
+                               checks=False,
+                               quadrule=quadrule,
+                               verbose=verbose,
+                               inverse=inverse)
+
+            zsqr, Yr, history, Yl = P.feast(Yr,
+                                            Yl=Yl,
+                                            hermitian=False,
+                                            **feastkwargs)
+            _, cgd = history[-2], history[-1]
+            if not cgd:
+                raise ValueError('FEAST failed. Try another region')
+
+            ndofs.append(Yr.fes.ndof)
+            Zsqrs.append(zsqr)
+            print(f'ADAPTIVITY at {ndofs[-1]:7d} ndofs: '
+                  f'Zsqr = {Zsqrs[-1][0]:+10.8f}')
+
+            # 2. ESTIMATE
+
+            Yr.normalize()
+            Yl.normalize()
+
+            avr_zsqr = np.average(zsqr)
+            ee = self.eestimator_helmholtz(Yr, Yl, avr_zsqr, self.pml_A,
+                                           self.pml_B, self.V)
+            eevis.vec.FV().NumPy()[:] = ee
+
+            # Yield state to caller for optional drawing / inspection
+            yield {
+                'ndof': ndofs[-1],
+                'zsqr': zsqr,
+                'ee': ee,
+                'eevis': eevis,
+                'Yr': Yr,
+                'Yl': Yl,
+                'Zsqrs': Zsqrs,
+                'ndofs': ndofs,
+            }
+
+            if ndofs[-1] > maxndofs:
+                break
+
+            # 3. MARK (average-based threshold)
+
+            threshold = np.mean(ee)
+            self.mesh.ngmesh.Elements2D().NumPy()["refine"] = ee > threshold
+            nummarked = sum(self.mesh.ngmesh.Elements2D().NumPy()["refine"])
+            print(f'  Marked {nummarked} elements for refinement')
+
+            # 4. REFINE
+
+            self.mesh.Refine()
+            ngmesh = self.mesh.ngmesh.Copy()
+            self.mesh = ng.Mesh(ngmesh)
+            self.mesh.Curve(max(p, 3))
+
+            if trustme:
+                centerZ2 = avr_zsqr
+                npts = 1
+                nspan = 1
+
+        # Adaptivity loop done ------------------------------------------
+
+        beta = self.betafrom(zsqr)
+        print('Results:\n\tZ²:', zsqr)
+        print('\tbeta:', beta)
+        print('\tCL dB/m:', 20 * beta.imag / np.log(10))
+        maxbdrnrm = np.max(self.boundarynorm(Yr))
+        if maxbdrnrm > 1e-6:
+            print('*** Mode boundary L2 norm > 1e-6!')
+
+        return Zsqrs, ndofs, Yr, Yl, beta, P
+
     def leakymode_adapt(self,
                         p,
                         radiusZ2=0.1,
