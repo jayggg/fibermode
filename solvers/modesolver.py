@@ -660,9 +660,6 @@ class ModeSolver:
     # ###################################################################
     # SMOOTHER HANDMADE PML #############################################
 
-    # ###################################################################
-    # # SYMBOLICS AND RESOLVENT #########################################
-
     def smoothpmlsymb(self, alpha, pmlbegin, pmlend):
         """
         Symbolic pml functions useful for debugging/visualization of pml.
@@ -670,11 +667,8 @@ class ModeSolver:
         We compute a radial PML function φ(r) = α * φ(r) and the derived
         functions τ(r) = μ(r) = 1 + αφ(r) (called taut in the code),
         and τ_mapped(r) = r * τ(r) = r * μ(r) = η(r) = r * (1 + αφ(r)).
-        Remaining terms are also computed. Notation is not unified.
-        Reader is advised to consult the code for the exact meaning of
-        the symbols used.
-        Cf. Kim and Pasciak; Gopalakrishnan et al.
         """
+
         # symbolically derive the radial PML functions
         s, t, r0, r1 = sm.symbols('s t R_0 R_1')
         nr = sm.integrate((s - r0)**2 * (s - r1)**2, (s, r0, t)).factor()
@@ -1985,6 +1979,666 @@ class ModeSolver:
         print(' CL dB/m:', 20 * betas.imag / np.log(10))
 
         return betas, Zsqrs, E, phi, R
+
+    # ###################################################################
+    # ERROR ESTIMATORS AND ADAPTIVITY ###################################
+
+    def eestimator_maxwell(self, rgt, lft, lam):
+        """
+        DWR error estimator for Maxwell eigenproblem in compound
+        form. We write eta = eta_1 + eta_2 + eta_3, where
+            eta_i = sqrt(Omega_i_R * Rho_i_R) + sqrt(Omega_i_L * Rho_i_L)
+        INPUT:
+        * lft: left eigenfunction as NGvecs object for the compound form
+        * rgt: right eigenfunction as NGvecs object for the compound form
+        * lam: eigenvalue
+        OUTPUT:
+        * Eta: element-wise error estimator
+        * Etas: dictionary with more info (see code)
+        """
+
+        assert rgt.m == lft.m and len(lam) == rgt.m, \
+            'Check FEAST output:\n' + f'rgt.m {rgt.m} != lft.m {lft.m}'
+
+        if self.gamma is None:
+            raise ValueError('PML coefficients not set. Use set_vecpml_coeff.')
+
+        eta1s = []
+        eta2s = []
+        eta3s = []
+        kappa = self.kappa
+        gamma = self.gamma
+        detj = self.detj
+        kappabar = self.kappa_conj
+        gammabar = self.gamma_conj
+        detjbar = self.detj_conj
+
+        h = ng.specialcf.mesh_size
+        n = ng.specialcf.normal(self.mesh.dim)
+        n2 = self.index * self.index
+        W = ng.L2(self.mesh, order=self.p, complex=True)
+        kcurlE = ng.GridFunction(W)
+        W2 = ng.HDiv(self.mesh,
+                     order=self.p + 1,
+                     complex=True,
+                     discontinuous=True)
+        flux = ng.GridFunction(W2)
+
+        for i in range(rgt.m):
+
+            R = rgt.gridfun('R', i=i)
+            L = lft.gridfun('L', i=i)
+            Z2 = lam[i]
+            ER = R.components[0]
+            EL = L.components[0]
+            phiR = R.components[1]
+            phiL = L.components[1]
+            V = self.V
+
+            with ng.TaskManager():
+
+                kcurlE.Set(kappa * curl(ER))
+                gradkcurlER = grad(kcurlE)
+                rotkcurlER = CF((gradkcurlER[1], -gradkcurlER[0]))
+                ggphiR = gamma * grad(phiR)
+                rho1Ri = rotkcurlER + ggphiR + (V - Z2) * gamma * ER
+                rho1Rj = kcurlE - kcurlE.Other()
+                rho1Rint = h * h * InnerProduct(rho1Ri, rho1Ri)
+                rho1Rjmp = 0.5 * h * rho1Rj * Conj(rho1Rj)
+                Rho1R = Integrate(rho1Rint * dx +
+                                  rho1Rjmp * dx(element_boundary=True),
+                                  self.mesh,
+                                  element_wise=True)
+
+                flux.Set(ggphiR + (V - Z2) * gamma * ER)
+                divEphiR = div(flux)
+                rho2Rj = (flux - flux.Other()) * n
+                rho2Rint = h * h * divEphiR * Conj(divEphiR)
+                rho2Rjmp = 0.5 * h * rho2Rj * Conj(rho2Rj)
+                Rho2R = Integrate(rho2Rint * dx +
+                                  rho2Rjmp * dx(element_boundary=True),
+                                  self.mesh,
+                                  element_wise=True)
+
+                flux.Set(n2 * gamma * ER)
+                divngER = div(flux)
+                rho3Ri = n2 * detj * phiR + divngER
+                rho3Rj = (flux - flux.Other()) * n
+                rho3Rint = h * h * rho3Ri * Conj(rho3Ri)
+                rho3Rjmp = 0.5 * h * rho3Rj * Conj(rho3Rj)
+                Rho3R = Integrate(rho3Rint * dx +
+                                  rho3Rjmp * dx(element_boundary=True),
+                                  self.mesh,
+                                  element_wise=True)
+
+                Omega1R = Integrate(InnerProduct(curl(ER), curl(ER)) * dx,
+                                    self.mesh,
+                                    element_wise=True)
+                Omega2R = Integrate(InnerProduct(ER, ER) * dx,
+                                    self.mesh,
+                                    element_wise=True)
+                Omega3R = Integrate(InnerProduct(grad(phiR), grad(phiR)) * dx,
+                                    self.mesh,
+                                    element_wise=True)
+
+                kcurlE.Set(kappabar * curl(EL))
+                gradkcurlEL = grad(kcurlE)
+                rotkcurlEL = CF((gradkcurlEL[1], -gradkcurlEL[0]))
+                rho1Li = rotkcurlEL + n2 * gammabar * grad(phiL) + \
+                    (V - Z2.conjugate()) * gammabar * EL
+                rho1Lj = kcurlE - kcurlE.Other()
+                rho1Lint = h * h * InnerProduct(rho1Li, rho1Li)
+                rho1Ljmp = 0.5 * h * rho1Lj * Conj(rho1Lj)
+                Rho1L = Integrate(rho1Lint * dx +
+                                  rho1Ljmp * dx(element_boundary=True),
+                                  self.mesh,
+                                  element_wise=True)
+
+                flux.Set(n2 * gammabar * grad(phiL) +
+                         (V - Z2.conjugate()) * gammabar * EL)
+                divEphiL = div(flux)
+                rho2Lj = (flux - flux.Other()) * n
+                rho2Lint = h * h * divEphiL * Conj(divEphiL)
+                rho2Ljmp = 0.5 * h * rho2Lj * Conj(rho2Lj)
+                Rho2L = Integrate(rho2Lint * dx +
+                                  rho2Ljmp * dx(element_boundary=True),
+                                  self.mesh,
+                                  element_wise=True)
+
+                flux.Set(gammabar * EL)
+                divgEL = div(flux)
+                rho3Li = n2 * detjbar * phiL + divgEL
+                rho3Lj = (flux - flux.Other()) * n
+                rho3Lint = h * h * rho3Li * Conj(rho3Li)
+                rho3Ljmp = 0.5 * h * rho3Lj * Conj(rho3Lj)
+                Rho3L = Integrate(rho3Lint * dx +
+                                  rho3Ljmp * dx(element_boundary=True),
+                                  self.mesh,
+                                  element_wise=True)
+
+                Omega1L = Integrate(InnerProduct(curl(EL), curl(EL)) * dx,
+                                    self.mesh,
+                                    element_wise=True)
+                Omega2L = Integrate(InnerProduct(EL, EL) * dx,
+                                    self.mesh,
+                                    element_wise=True)
+                Omega3L = Integrate(InnerProduct(grad(phiL), grad(phiL)) * dx,
+                                    self.mesh,
+                                    element_wise=True)
+
+                Eta1 = np.sqrt(Omega1L.real.NumPy() * Rho1R.real.NumPy())
+                Eta1 += np.sqrt(Omega1R.real.NumPy() * Rho1L.real.NumPy())
+                eta1s.append(Eta1)
+
+                Eta2 = np.sqrt(Omega2L.real.NumPy() * Rho2R.real.NumPy())
+                Eta2 += np.sqrt(Omega2R.real.NumPy() * Rho2L.real.NumPy())
+                eta2s.append(Eta2)
+
+                Eta3 = np.sqrt(Omega3L.real.NumPy() * Rho3R.real.NumPy())
+                Eta3 += np.sqrt(Omega3R.real.NumPy() * Rho3L.real.NumPy())
+                eta3s.append(Eta3)
+
+        Eta = np.zeros_like(eta1s[0])
+        Eta1 = np.zeros_like(Eta)
+        Eta2 = np.zeros_like(Eta)
+        Eta3 = np.zeros_like(Eta)
+        for i in range(rgt.m):
+            Eta1 += eta1s[i]
+            Eta2 += eta2s[i]
+            Eta3 += eta3s[i]
+        Eta = Eta1 + Eta2 + Eta3
+
+        Etas = {
+            'eta1s': eta1s,
+            'eta2s': eta2s,
+            'eta3s': eta3s,
+            'Eta1': (Eta1, np.max(Eta1)),
+            'Eta2': (Eta2, np.max(Eta2)),
+            'Eta3': (Eta3, np.max(Eta3)),
+        }
+
+        return Eta, Etas
+
+    def leakyvecmodes_adapt_gen(self,
+                                p,
+                                radius,
+                                center,
+                                alpha=None,
+                                pmlbegin=None,
+                                pmlend=None,
+                                maxndofs=200000,
+                                markfraction=0.1,
+                                autoupdate=False,
+                                trustme=True,
+                                npts=4,
+                                nspan=5,
+                                seed=1,
+                                within=None,
+                                rhoinv=0.0,
+                                quadrule='circ_trapez_shift',
+                                inverse='umfpack',
+                                verbose=True,
+                                **feastkwargs):
+        """
+        Generator version of leakyvecmodes_adapt.  Yields the state dict
+
+            {'ndof': int, 'zsqr': array, 'ee': array, 'eevis': GridFunction,
+             'uR': NGvecs, 'uL': NGvecs, 'Zsqrs': list, 'errestimates': list,
+             'ndofs': list}
+
+        after each Solve→Estimate step (before Mark→Refine), so the caller
+        can draw or inspect intermediate results.  When the loop ends the
+        generator returns the same tuple as leakyvecmodes_adapt:
+
+            Zsqrs, errestimates, ndofs, ER, EL, phiR, phiL, beta, P
+
+        Typical notebook usage:
+
+            # create generator
+            stepper = bragg_n.leakyvecmodes_adapt_gen(p=3, ...)
+
+            # run each iteration
+            try:
+                state = next(stepper)
+                Draw(state['eevis'])
+                Draw(state['uR'].gridfun(i=0).components[0])
+            except StopIteration as done:
+                Zsqrs, errestimates, ndofs, ER, EL, phiR, phiL, beta, P = \
+                     done.value
+        """
+
+        ndofs = [0]
+        Zsqrs = []
+        errestimates = []
+        checkcontour = 3
+        E_space = ng.L2(self.mesh,
+                        order=0,
+                        autoupdate=autoupdate,
+                        nested=autoupdate)
+        eevis = ng.GridFunction(E_space,
+                                name='estimator',
+                                autoupdate=autoupdate,
+                                nested=autoupdate)
+
+        while ndofs[-1] < maxndofs:  # ADAPTIVITY LOOP ------------------
+
+            aa, mm, Z = self.smoothvecpmlsystem_compound(p,
+                                                         alpha=alpha,
+                                                         pmlbegin=pmlbegin,
+                                                         pmlend=pmlend,
+                                                         autoupdate=autoupdate)
+            uR = NGvecs(Z, nspan)
+            uL = NGvecs(Z, nspan)
+            uR.setrandom(seed=seed)
+            uL.setrandom(seed=seed)
+            print('ADAPTIVITY at ', uR.fes.ndof, ' ndofs:')
+            print('  Assembling system...')
+
+            # 1. SOLVE
+
+            with ng.TaskManager():
+                try:
+                    aa.Assemble()
+                    mm.Assemble()
+                except Exception:
+                    print('   *** Trying again with larger heap')
+                    ng.SetHeapSize(int(1e9))
+                    aa.Assemble()
+                    mm.Assemble()
+
+            P = SpectralProjNG(Z,
+                               aa.mat,
+                               mm.mat,
+                               radius=radius,
+                               center=center,
+                               npts=npts,
+                               within=within,
+                               rhoinv=rhoinv,
+                               checks=False,
+                               quadrule=quadrule,
+                               verbose=verbose,
+                               inverse=inverse)
+            zsqr, uR, history, uL = P.feast(uR,
+                                            Yl=uL,
+                                            hermitian=False,
+                                            check_contour=checkcontour,
+                                            **feastkwargs)
+            _, cgd = history[-2], history[-1]
+            if not cgd:
+                raise ValueError('FEAST failed. Try another region')
+            ndofs.append(uR.fes.ndof)
+            Zsqrs.append(zsqr)
+            print('  Computed eigenvalues:', zsqr)
+
+            center = np.average(zsqr)
+            if trustme:
+                npts = 1
+                nspan = len(zsqr)
+                checkcontour = 0  # with this, radius is irrelevant
+
+            # 2. ESTIMATE
+
+            uR.normalize()
+            uL.normalize()
+
+            ee, more = self.eestimator_maxwell(uR, uL, zsqr)
+            errestimates.append((sum(ee), more))
+            print('  Error estimator:', errestimates[-1][0])
+
+            if not autoupdate:
+                E_space = ng.L2(self.mesh, order=0)
+                eevis = ng.GridFunction(E_space, name='estimator')
+            eevis.vec.FV().NumPy()[:] = ee
+
+            # Yield state to caller for optional drawing / inspection
+            yield {
+                'ndof': ndofs[-1],
+                'zsqr': zsqr,
+                'ee': ee,
+                'eevis': eevis,
+                'uR': uR,
+                'uL': uL,
+                'Zsqrs': Zsqrs,
+                'errestimates': errestimates,
+                'ndofs': ndofs,
+            }
+
+            if ndofs[-1] > maxndofs:
+                break
+
+            # 3. MARK
+            maxee = np.max(ee)
+            self.mesh.ngmesh.Elements2D().NumPy()["refine"] = \
+                ee > markfraction * maxee
+            nummarked = sum(self.mesh.ngmesh.Elements2D().NumPy()["refine"])
+            print('  Marked ', nummarked, ' elements for refinement')
+
+            # 4. REFINE
+
+            self.mesh.Refine()
+            if not autoupdate:
+                ngmesh = self.mesh.ngmesh.Copy()
+                self.mesh = ng.Mesh(ngmesh)
+            self.mesh.Curve(max(p, 3))
+
+        # Adaptivity loop done ------------------------------------------
+
+        beta = self.betafrom(zsqr)
+        print('Results:\n Z²:', zsqr)
+        print(' beta:', beta)
+        print(' CL dB/m:', 20 * beta.imag / np.log(10))
+
+        # Unpack uR, uL into ER, EL, phiR, phiL
+        X, Y = Z.components
+        ER = NGvecs(X, uR.m)
+        EL = NGvecs(X, uL.m)
+        phiR = NGvecs(Y, uR.m)
+        phiL = NGvecs(Y, uL.m)
+
+        for i in range(uR.m):
+            ER._mv[i].data = uR[i].components[0].vec.data
+            EL._mv[i].data = uL[i].components[0].vec.data
+            phiR._mv[i].data = uR[i].components[1].vec.data
+            phiL._mv[i].data = uL[i].components[1].vec.data
+
+        maxbdrnrm_r = np.max(self.boundarynorm(ER))
+        maxbdrnrm_l = np.max(self.boundarynorm(EL))
+        maxbdrnrm = max(maxbdrnrm_r, maxbdrnrm_l)
+        if maxbdrnrm > 1e-6:
+            print('*** Mode boundary L2 norm > 1e-6!')
+
+        return Zsqrs, errestimates, ndofs, ER, EL, phiR, phiL, beta, P
+
+    def leakyvecmodes_adapt(self,
+                            p,
+                            radius,
+                            center,
+                            alpha=None,
+                            pmlbegin=None,
+                            pmlend=None,
+                            maxndofs=200000,
+                            markfraction=0.1,
+                            autoupdate=False,
+                            trustme=True,
+                            npts=4,
+                            nspan=5,
+                            seed=1,
+                            within=None,
+                            rhoinv=0.0,
+                            quadrule='circ_trapez_shift',
+                            inverse='umfpack',
+                            verbose=True,
+                            **feastkwargs):
+        """
+        Compute vector leaky modes by DWR adaptivity, solving in each
+        iteration a linear eigenproblem obtained using the
+        (frequency-independent) C² smooth PML in which
+            mapped_x = x * (1 + 1j * α * φ(r))
+        where φ is a C² function of the radius r.  The eigenproblem is
+        solved by a non-selfadjoint FEAST algorithm.
+
+        For per-iteration visualization use leakyvecmodes_adapt_gen instead.
+
+        INPUT:
+
+        * radius, center:
+            Capture modes whose non-dimensional resonance value Z²
+            is such that Z*Z is contained within the circular contour
+            centered at "centerZ2" of radius "radiusZ2" in the complex
+            plane.
+        * markfraction: if eta_T > markfraction * max_T eta_T,
+            then mark element T for refinement. Here eta_T is the DWR
+            error estimator.
+        * maxndofs: Stop adaptive loop if number of dofs exceed this.
+        * autoupdate: If True, use NGSolve's autoupdate-on-refinement feature
+            for meshes, spaces, and gridfunctions. If False, then after
+            each adaptive refinement, copy the mesh, create new gridfunctions,
+            new spaces, etc., in each iteration.
+        * trustme: If True, then abandon contour checking, lock nspan to
+            first converged dimension, and just do shifted inverse iteration
+            with shift set to mean of prior converged eigenvalue iterates.
+        * Remaining inputs are as documented in leakymode(..).
+
+        OUTPUT:   Zsqrs, errestimates, ndofs, ER, EL, phiR, phiL, beta, P
+        """
+
+        kw = dict(alpha=alpha,
+                  pmlbegin=pmlbegin,
+                  pmlend=pmlend,
+                  maxndofs=maxndofs,
+                  markfraction=markfraction,
+                  autoupdate=autoupdate,
+                  trustme=trustme,
+                  npts=npts,
+                  nspan=nspan,
+                  seed=seed,
+                  within=within,
+                  rhoinv=rhoinv,
+                  quadrule=quadrule,
+                  inverse=inverse,
+                  verbose=verbose,
+                  **feastkwargs)
+        gen = self.leakyvecmodes_adapt_gen(p, radius, center, **kw)
+        try:
+            while True:
+                next(gen)
+        except StopIteration as done:
+            return done.value
+
+    def eestimator_helmholtz(self, rgt, lft, lam, A, B, V):
+        """
+        DWR error estimator for eigenvalues
+
+        INPUT:
+        * lft: left eigenfunction as NGvecs object
+        * rgt: right eigenfunction as NGvecs object
+        * lam: eigenvalue
+        * A, B, V are such that the eigenproblem is
+          -div(A grad u) + V B u = lam B  u
+
+        OUTPUT:
+        * ee: element-wise error estimator
+        """
+        assert rgt.m == lft.m, 'Check FEAST output:\n' + \
+            f'rgt.m {rgt.m} != lft.m {lft.m}'
+
+        h = ng.specialcf.mesh_size
+        n = ng.specialcf.normal(self.mesh.dim)
+        etas = []
+
+        for i in range(rgt.m):
+            R = rgt.gridfun('R', i=i)
+            L = lft.gridfun('L', i=i)
+
+            AgradR = A * grad(R)
+            divAgradR = AgradR[0].Diff(ng.x) + AgradR[1].Diff(ng.y)
+            AgradL = A * grad(L)
+            divAgradL = AgradL[0].Diff(ng.x) + AgradL[1].Diff(ng.y)
+
+            r = h * (divAgradR - V * B * R + lam * R)
+            rhoR = Integrate(InnerProduct(r, r) * dx,
+                             self.mesh,
+                             element_wise=True)
+            r = h * (divAgradL - V * B * L + np.conj(lam) * L)
+            rhoL = Integrate(InnerProduct(r, r) * dx,
+                             self.mesh,
+                             element_wise=True)
+            jR = n * (AgradR - AgradR.Other())
+            jL = n * (AgradL - AgradL.Other())
+            rhoR += Integrate(0.5 * h * InnerProduct(jR, jR) *
+                              dx(element_boundary=True),
+                              self.mesh,
+                              element_wise=True)
+            rhoL += Integrate(0.5 * h * InnerProduct(jL, jL) *
+                              dx(element_boundary=True),
+                              self.mesh,
+                              element_wise=True)
+
+            omegaR = Integrate(h * InnerProduct(grad(R), grad(R)),
+                               self.mesh,
+                               element_wise=True)
+            omegaL = Integrate(h * InnerProduct(grad(L), grad(L)),
+                               self.mesh,
+                               element_wise=True)
+
+            ee_i = np.sqrt(omegaR.real.NumPy() * rhoR.real.NumPy())
+            ee_i += np.sqrt(omegaL.real.NumPy() * rhoL.real.NumPy())
+            etas.append(ee_i)
+
+        ee = np.zeros_like(etas[0])
+        for eta_i in etas:
+            ee += eta_i
+        return ee
+
+    def leakymode_adapt(self,
+                        p,
+                        radiusZ2=0.1,
+                        centerZ2=4,
+                        maxndofs=200000,
+                        visualize=True,
+                        pmlbegin=None,
+                        pmlend=None,
+                        alpha=10,
+                        npts=4,
+                        nspan=5,
+                        seed=1,
+                        within=None,
+                        rhoinv=0.0,
+                        quadrule='circ_trapez_shift',
+                        inverse='umfpack',
+                        trustme=False,
+                        verbose=True,
+                        **feastkwargs):
+        """
+        Compute scalar leaky modes by DWR adaptivity, solving in each
+        iteration a linear eigenproblem obtained using the
+        (frequency-independent) C² smooth PML in which
+            mapped_x = x * (1 + 1j * α * φ(r))
+        where φ is a C² function of the radius r.  The eigenproblem is
+        solved by a non-selfadjoint FEAST algorithm.
+
+        INPUT:
+
+        * radiusZ2, centerZ2:
+            Capture modes whose non-dimensional resonance value Z²
+            lies within the circular contour centered at centerZ2
+            of radius radiusZ2 in the complex plane.
+        * maxndofs: Stop adaptive loop if number of dofs exceed this.
+        * trustme: If True, update centerZ2 to the average of the Z²
+            values found in the previous iteration (shifted inverse
+            iteration mode).
+        * visualize: If True, pause each iteration to display the estimator.
+        * Remaining inputs are as documented in leakymode(..).
+
+        OUTPUT:   Zsqrs, ndofs, Yr, Yl, beta, P
+        """
+
+        ndofs = [0]
+        Zsqrs = []
+        if visualize:
+            eevis = ng.GridFunction(ng.L2(self.mesh, order=0, autoupdate=True),
+                                    name='estimator',
+                                    autoupdate=True)
+            ng.Draw(eevis)
+
+        while ndofs[-1] < maxndofs:  # ADAPTIVITY LOOP ------------------
+
+            a, b, X = self.smoothpmlsystem(p,
+                                           alpha=alpha,
+                                           autoupdate=True,
+                                           pmlbegin=pmlbegin,
+                                           pmlend=pmlend)
+            Yr = NGvecs(X, nspan)
+            Yl = NGvecs(X, nspan)
+            Yr.setrandom(seed=seed)
+            Yl.setrandom(seed=seed)
+
+            # 1. SOLVE
+
+            with ng.TaskManager():
+                try:
+                    a.Assemble()
+                    b.Assemble()
+                except Exception:
+                    print('*** Trying again with larger heap')
+                    ng.SetHeapSize(int(1e9))
+                    a.Assemble()
+                    b.Assemble()
+
+            P = SpectralProjNG(X,
+                               a.mat,
+                               b.mat,
+                               radius=radiusZ2,
+                               center=centerZ2,
+                               npts=npts,
+                               within=within,
+                               rhoinv=rhoinv,
+                               checks=False,
+                               quadrule=quadrule,
+                               verbose=verbose,
+                               inverse=inverse)
+
+            zsqr, Yr, history, Yl = P.feast(Yr,
+                                            Yl=Yl,
+                                            hermitian=False,
+                                            **feastkwargs)
+            _, cgd = history[-2], history[-1]
+            if not cgd:
+                raise ValueError('FEAST failed. Try another region')
+
+            ndofs.append(Yr.fes.ndof)
+            Zsqrs.append(zsqr)
+            print(f'ADAPTIVITY at {ndofs[-1]:7d} ndofs: '
+                  f'Zsqr = {Zsqrs[-1][0]:+10.8f}')
+
+            # 2. ESTIMATE
+
+            Yr.normalize()
+            Yl.normalize()
+
+            avr_zsqr = np.average(zsqr)
+            ee = self.eestimator_helmholtz(Yr, Yl, avr_zsqr, self.pml_A,
+                                           self.pml_B, self.V)
+            if visualize:
+                eevis.vec.FV().NumPy()[:] = ee
+                ng.Draw(eevis)
+                Yl.draw(name='LftEig')
+                Yr.draw(name='RgtEig')
+                input('* Pausing for visualization. Enter any key to continue')
+
+            if ndofs[-1] > maxndofs:
+                break
+
+            # 3. MARK (average-based threshold)
+
+            threshold = np.mean(ee)
+            self.mesh.ngmesh.Elements2D().NumPy()["refine"] = ee > threshold
+            nummarked = sum(self.mesh.ngmesh.Elements2D().NumPy()["refine"])
+            print(f'  Marked {nummarked} elements for refinement')
+
+            # 4. REFINE
+
+            self.mesh.Refine()
+            ngmesh = self.mesh.ngmesh.Copy()
+            self.mesh = ng.Mesh(ngmesh)
+            self.mesh.Curve(max(p, 3))
+
+            if trustme:
+                centerZ2 = avr_zsqr
+                npts = 1
+                nspan = 1
+
+        # Adaptivity loop done ------------------------------------------
+
+        beta = self.betafrom(zsqr)
+        print('Results:\n\tZ²:', zsqr)
+        print('\tbeta:', beta)
+        print('\tCL dB/m:', 20 * beta.imag / np.log(10))
+        maxbdrnrm = np.max(self.boundarynorm(Yr))
+        if maxbdrnrm > 1e-6:
+            print('*** Mode boundary L2 norm > 1e-6!')
+
+        return Zsqrs, ndofs, Yr, Yl, beta, P
 
     # ###################################################################
     # BENT MODES
