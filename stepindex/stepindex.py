@@ -2,7 +2,6 @@ import ngsolve as ng
 import numpy as np
 from netgen.geom2d import SplineGeometry
 from ngsolve import H1, CF, dx
-import fibermode
 from fibermode.stepindex import StepIndexExact
 from fibermode.solvers import ModeSolver
 from pyeigfeast.spectralproj.ngs import NGvecs
@@ -224,11 +223,12 @@ class StepIndex(ModeSolver):
         When a fiber of refractive index n is bent to have the
         input "curvature" (curvature = reciprocal of bending radius,
         since we assume bending along a perfect circle), the changed
-        refractive index is modeled by the formula
+        refractive index is often modeled by the formula
 
             nbent = n * (1 + (x * curvature/bendfactor))
 
-        with "bendfactor" as input - see [Schermer and Cole, 2007].
+        with "bendfactor" as input - see [Schermer and Cole, 2007] -
+        to account for the photoelastic effect (Pockel coefficients).
         This dimensional formula is used non-dimensionally below to
         set the internal data member "V", the non-dimensional
         coefficient function for the eigenproblem.
@@ -429,7 +429,7 @@ class StepIndex(ModeSolver):
             for ll in range(1, maxl):
                 LPl = self.fiber.XtoBeta(self.fiber.propagation_constants(
                     ll, v=vnum),
-                                         v=vnum)
+                    v=vnum)
                 for m in range(len(LPl)):
                     ind = np.argmin(abs(LPl[m] - ctrs[activemultiple]))
                     i2beta_a = ml['index'][activemultiple[ind]][0]
@@ -459,8 +459,8 @@ class StepIndex(ModeSolver):
 
         for i in range(len(efs.vecs)):
             total_energy = ng.Integrate(
-                ng.InnerProduct(efs.MDComponent(i), efs.MDComponent(i)) *
-                dx, self.mesh).real
+                ng.InnerProduct(efs.MDComponent(i), efs.MDComponent(i)) * dx,
+                self.mesh).real
             core_energy = ng.Integrate(
                 ng.InnerProduct(efs.MDComponent(i), efs.MDComponent(i)) *
                 dx("core"), self.mesh).real
