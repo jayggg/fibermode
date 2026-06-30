@@ -519,12 +519,12 @@ class ModeSolver:
 
                             selfr.tmpX1.vec.data = C.mat * selfr.tmpY2.vec
                             Aqr[i].data -= selfr.tmpX1.vec
-                        qAq = ng.InnerProduct(Aqr, ql._mv).NumPy().T
+                        qAq = InnerProduct(Aqr, ql._mv).NumPy().T
 
                     if qBq is not None:
                         Bqr = Aqr
                         Bqr[:] = M.mat * qr._mv
-                        qBq = ng.InnerProduct(Bqr, ql._mv).NumPy().T
+                        qBq = InnerProduct(Bqr, ql._mv).NumPy().T
 
                 return (qAq, qBq)
 
@@ -732,12 +732,6 @@ class ModeSolver:
         AA[0] += s * (R - 2 * r) / r**3 * (x * ux + y * uy) * (x * vx +
                                                                y * vy) * dx_pml
         AA[0] += -s**3 * (r - R)**2 / (R * r) * u * v * dx_pml
-        AA[0] += 0 * u * v * dx
-
-        # I always thought sparsity in ngsolve is based on the FE space only,
-        # not the integrators, but that seems to be no longer accurate today.
-        # To force AA[i]'s to be of the same sparsity, I am having to add
-        # this 0 * u * v * dx.
 
         AA += [ng.BilinearForm(X)]
         AA[1] += grad(u) * grad(v) * dx_int
@@ -746,16 +740,13 @@ class ModeSolver:
                                                            y * vy) * dx_pml
         AA[1] += 1 / r**2 * (x * ux + y * uy) * v * dx_pml
         AA[1] += -2 * s * s * (r - R) / r * u * v * dx_pml
-        AA[1] += 0 * u * v * dx
 
         AA += [ng.BilinearForm(X, check_unused=False)]
         AA[2] += R / s / r**3 * (x * ux + y * uy) * (x * vx + y * vy) * dx_pml
         AA[2] += -R * s / r * u * v * dx_pml
-        AA[2] += 0 * u * v * dx
 
         AA += [ng.BilinearForm(X, check_unused=False)]
         AA[3] += -u * v * dx_int
-        AA[3] += 0 * u * v * dx
 
         with ng.TaskManager():
             for i in range(len(AA)):
@@ -1471,12 +1462,12 @@ class ModeSolver:
 
                             selfr.tmpX1.vec.data = c.mat * selfr.tmpY2.vec
                             Aqr[i].data -= selfr.tmpX1.vec
-                        qAq = ng.InnerProduct(Aqr, ql._mv).NumPy().T
+                        qAq = InnerProduct(Aqr, ql._mv).NumPy().T
 
                     if qBq is not None:
                         Bqr = Aqr
                         Bqr[:] = m.mat * qr._mv
-                        qBq = ng.InnerProduct(Bqr, ql._mv).NumPy().T
+                        qBq = InnerProduct(Bqr, ql._mv).NumPy().T
 
                 return (qAq, qBq)
 
@@ -2146,13 +2137,13 @@ class ModeSolver:
                                   self.mesh,
                                   element_wise=True)
 
-                Omega1R = Integrate(InnerProduct(curl(ER), curl(ER)) * dx,
+                Omega1R = Integrate((curl(ER) | curl(ER)) * dx,
                                     self.mesh,
                                     element_wise=True)
-                Omega2R = Integrate(InnerProduct(ER, ER) * dx,
+                Omega2R = Integrate((ER | ER) * dx,
                                     self.mesh,
                                     element_wise=True)
-                Omega3R = Integrate(InnerProduct(grad(phiR), grad(phiR)) * dx,
+                Omega3R = Integrate((grad(phiR) | grad(phiR)) * dx,
                                     self.mesh,
                                     element_wise=True)
 
@@ -2191,13 +2182,13 @@ class ModeSolver:
                                   self.mesh,
                                   element_wise=True)
 
-                Omega1L = Integrate(InnerProduct(curl(EL), curl(EL)) * dx,
+                Omega1L = Integrate((curl(EL) | curl(EL)) * dx,
                                     self.mesh,
                                     element_wise=True)
-                Omega2L = Integrate(InnerProduct(EL, EL) * dx,
+                Omega2L = Integrate((EL | EL) * dx,
                                     self.mesh,
                                     element_wise=True)
-                Omega3L = Integrate(InnerProduct(grad(phiL), grad(phiL)) * dx,
+                Omega3L = Integrate((grad(phiL) | grad(phiL)) * dx,
                                     self.mesh,
                                     element_wise=True)
 
