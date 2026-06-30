@@ -1,6 +1,28 @@
 """
 Definition of ModeSolver class and its methods for computing
 modes of various fibers.
+
+ORGANIZATION:
+
+  GUIDED MODES
+    GUIDED MODES — Scalar: self-adjoint eigenproblem for guided LP modes.
+    GUIDED MODES — Vector: full-wave vector modes of non-lossy fibers.
+    GUIDED MODES — Helicoidal: modes of helically wound fibers.
+
+  LEAKY MODES
+    LEAKY MODES — Polynomial PML: polynomial eigenproblem; simplest
+      formulation but nonlinear.
+    LEAKY MODES — Auto PML: NGSolve built-in PML; easiest to set up,
+      includes leaky vector modes.
+    LEAKY MODES — Smooth PML: C² handmade PML for better-conditioned matrices.
+      -- Infrastructure: symbolic PML construction and resolvent classes.
+      -- System builders: compound and resolvent system assembly.
+      -- Solvers: leaky mode solvers using smooth PML.
+
+  ADAPTIVITY BY DWR: DWR-based adaptive refinement for high-accuracy
+    leaky vector modes; use leakyvecmodes_adapt or its generator variant.
+
+  BENT MODES (section): bent/helicoidal fiber modes (scalar and vector).
 """
 from warnings import warn
 from ngsolve import curl, div, grad, dx, Conj, Integrate, InnerProduct, CF
@@ -269,7 +291,479 @@ class ModeSolver:
         return 1 / 2 * Stv, 1 / 2 * Sz
 
     # ###################################################################
-    # FREQ-DEPENDENT PML BY POLYNOMIAL EIGENPROBLEM #####################
+    # GUIDED MODES ######################################################
+
+    # GUIDED MODES — Scalar #############################################
+
+    def selfadjsystem(self, p):
+
+        if self.ngspmlset:
+            raise RuntimeError('NGSolve pml mesh trafo set.')
+
+        X = ng.H1(self.mesh, order=p, dirichlet='OuterCircle', complex=True)
+        u, v = X.TnT()
+        A = ng.BilinearForm(X)
+        A += grad(u) * grad(v) * dx + self.V * u * v * dx
+        B = ng.BilinearForm(X)
+        B += u * v * dx
+
+        with ng.TaskManager():
+            try:
+                A.Assemble()
+                B.Assemble()
+            except Exception:
+                print('*** Trying again with larger heap')
+                ng.SetHeapSize(int(1e9))
+                A.Assemble()
+                B.Assemble()
+
+        return A, B, X
+
+    def selfadjmodes(self,
+                     interval=(-10, 0),
+                     p=3,
+                     seed=1,
+                     npts=20,
+                     nspan=15,
+                     within=None,
+                     rhoinv=0.0,
+                     quadrule='circ_trapez_shift',
+                     verbose=True,
+                     inverse='umfpack',
+                     **feastkwargs):
+        """
+        Search for guided modes in a given "interval", which is to be
+        input as a tuple: interval=(left, right). These modes solve
+
+        -Δu + V u = Z² u
+
+        with zero dirichlet boundary conditions (no PML, no loss) at the
+        outer boundary of the computational domain.
+
+        The computation is done using Lagrangre finite elements of degree "p"
+        (with no PML) using selfadjoint FEAST with a random span of "nspan"
+        vectors (and using the remaining parameters, which are simply
+        passed to feast).
+
+        OUTPUTS:
+
+        betas, Zsqrs, Y:
+            betas[i] give the i-th real-valued propagation constant, and
+            Zsqrs[i] gives the feast-computed i-th nondimensional Z² value
+            in "interval". The corresponding eigenmode is i-th component
+            of the span object Y.
+
+        """
+
+        a, b, X = self.selfadjsystem(p)
+        left, right = interval
+        print('Running selfadjoint FEAST to capture guided modes in ' +
+              '({},{})'.format(left, right))
+        print('assuming not more than nspan=%d modes in this interval' % nspan)
+        ctr = (right + left) / 2
+        rad = (right - left) / 2
+        P = SpectralProjNG(X,
+                           a.mat,
+                           b.mat,
+                           radius=rad,
+                           center=ctr,
+                           npts=npts,
+                           reduce_sym=True,
+                           within=within,
+                           rhoinv=rhoinv,
+                           quadrule=quadrule,
+                           inverse=inverse,
+                           verbose=verbose)
+        Y = NGvecs(X, nspan, M=b.mat)
+        Y.setrandom(seed=seed)
+        Zsqrs, Y, history, _ = P.feast(Y, hermitian=True, **feastkwargs)
+        betas = self.betafrom(Zsqrs)
+
+        return betas, Zsqrs, Y
+
+    # GUIDED MODES — Vector #############################################
+
+    def vecmodesystem(self, p, alpha=None, inverse=None):
+        """
+        Prepare eigensystem and resolvents for solving for vector modes.
+
+        INPUTS:
+
+        p: Determines degree of Nedelec x Lagrange space system.
+           This should be an integer >= 0.
+
+        alpha: If alpha is None, prepare system for vector guided modes.
+           If alpha is a positive number, use it as PML strength and
+           prepare system for leaky modes using NGSolve's automatic
+           mesh-based PML.
+        """
+
+        if alpha is not None:
+            self.ngspmlset = True
+            radial = ng.pml.Radial(rad=self.R, alpha=alpha * 1j, origin=(0, 0))
+            self.mesh.SetPML(radial, 'Outer')
+            print('Set NGSolve automatic PML with p=', p, ' alpha=', alpha,
+                  'and thickness=%.3f' % (self.Rout - self.R))
+        elif self.ngspmlset:
+            raise RuntimeError('Unexpected NGSolve pml mesh trafo here.')
+
+        n = self.index
+        n2 = n * n
+        X = ng.HCurl(self.mesh,
+                     order=p + 1 - max(1 - p, 0),
+                     type1=True,
+                     dirichlet='OuterCircle',
+                     complex=True)
+        Y = ng.H1(self.mesh,
+                  order=p + 1,
+                  dirichlet='OuterCircle',
+                  complex=True)
+        E, v = X.TnT()
+        phi, psi = Y.TnT()
+
+        A = ng.BilinearForm(X)
+        A += (curl(E) * curl(v) + self.V * E * v) * dx
+        M = ng.BilinearForm(X)
+        M += E * v * dx
+        C = ng.BilinearForm(trialspace=Y, testspace=X)
+        C += grad(phi) * v * dx
+        B = ng.BilinearForm(trialspace=X, testspace=Y)
+        B += -n2 * E * grad(psi) * dx
+        D = ng.BilinearForm(Y, condense=True)
+        D += n2 * phi * psi * dx
+
+        with ng.TaskManager():
+            try:
+                A.Assemble()
+                M.Assemble()
+                B.Assemble()
+                C.Assemble()
+                D.Assemble()
+            except Exception:
+                print('*** Trying again with larger heap')
+                ng.SetHeapSize(int(1e9))
+                A.Assemble()
+                M.Assemble()
+                B.Assemble()
+                C.Assemble()
+                D.Assemble()
+            # Dinv = D.mat.Inverse(Y.FreeDofs(), inverse=inverse)
+            Dinv = D.mat.Inverse(Y.FreeDofs(coupling=True), inverse=inverse)
+
+        # resolvent of the vector mode problem --------------------------
+        class ResolventVectorMode():
+
+            # static resolvent class attributes, same for all class objects
+            XY = ng.FESpace([X, Y])
+            wrk1 = ng.GridFunction(XY)
+            wrk2 = ng.GridFunction(XY)
+            tmpY1 = ng.GridFunction(Y)
+            tmpY2 = ng.GridFunction(Y)
+            tmpX1 = ng.GridFunction(X)
+
+            def __init__(selfr, z, V, n, inverse=None):
+                n2 = n * n
+                XY = ng.FESpace([X, Y])
+                (E, phi), (v, psi) = XY.TnT()
+
+                # selfr.zminusOp = ng.BilinearForm(XY)
+                # selfr.zminusOp += (z * E * v - curl(E) * curl(v)
+                #                    - V * E * v - grad(phi) * v
+                #                    - n2 * phi * psi + n2 * E * grad(psi))
+                # * dx
+                # with ng.TaskManager():
+                #     try:
+                #         selfr.zminusOp.Assemble()
+                #     except Exception:
+                #         print('*** Trying again with larger heap')
+                #         ng.SetHeapSize(int(1e9))
+                #         selfr.zminusOp.Assemble()
+                #     selfr.R = selfr.zminusOp.mat.Inverse(XY.FreeDofs(),
+                #                                          inverse=inverse)
+
+                selfr.Z = ng.BilinearForm(XY, condense=True)
+                selfr.Z += (z * E * v - curl(E) * curl(v) - V * E * v -
+                            grad(phi) * v - n2 * phi * psi +
+                            n2 * E * grad(psi)) * dx
+                selfr.ZH = ng.BilinearForm(XY, condense=True)
+                selfr.ZH += (np.conjugate(z) * E * v - curl(E) * curl(v) -
+                             V * E * v - grad(psi) * E - n2 * phi * psi +
+                             n2 * v * grad(phi)) * dx
+                with ng.TaskManager():
+                    try:
+                        selfr.Z.Assemble()
+                        selfr.ZH.Assemble()
+                    except Exception:
+                        print('*** Trying again with larger heap')
+                        ng.SetHeapSize(int(1e9))
+                        selfr.Z.Assemble()
+                        selfr.ZH.Assemble()
+                    selfr.R_I = selfr.Z.mat.Inverse(XY.FreeDofs(coupling=True),
+                                                    inverse=inverse)
+
+            def act(selfr, v, Rv, workspace=None):
+                if workspace is None:
+                    Mv = ng.MultiVector(v._mv[0], v.m)
+                else:
+                    Mv = workspace._mv[:v.m]
+
+                with ng.TaskManager():
+                    Mv[:] = M.mat * v._mv
+                    for i in range(v.m):
+                        selfr.wrk1.components[0].vec[:] = Mv[i]
+                        selfr.wrk1.components[1].vec[:] = 0
+
+                        # selfr.wrk2.vec.data = selfr.R * selfr.wrk1.vec
+
+                        selfr.wrk1.vec.data += \
+                            selfr.Z.harmonic_extension_trans * selfr.wrk1.vec
+                        selfr.wrk2.vec.data = selfr.R_I * selfr.wrk1.vec
+                        selfr.wrk2.vec.data += \
+                            selfr.Z.inner_solve * selfr.wrk1.vec
+                        selfr.wrk2.vec.data += \
+                            selfr.Z.harmonic_extension * selfr.wrk2.vec
+
+                        Rv._mv[i][:] = selfr.wrk2.components[0].vec
+
+            def adj(selfr, v, RHv, workspace=None):
+                if workspace is None:
+                    Mv = ng.MultiVector(v._mv[0], v.m)
+                else:
+                    Mv = workspace._mv[:v.m]
+                with ng.TaskManager():
+                    Mv[:] = M.mat * v._mv
+                    for i in range(v.m):
+                        selfr.wrk1.components[0].vec[:] = Mv[i]
+                        selfr.wrk1.components[1].vec[:] = 0
+
+                        # selfr.wrk2.vec.data = selfr.R.H * selfr.wrk1.vec
+
+                        selfr.wrk1.vec.data += \
+                            selfr.ZH.harmonic_extension_trans * selfr.wrk1.vec
+                        selfr.wrk2.vec.data = selfr.R_I.H * selfr.wrk1.vec
+                        selfr.wrk2.vec.data += \
+                            selfr.ZH.inner_solve * selfr.wrk1.vec
+                        selfr.wrk2.vec.data += \
+                            selfr.ZH.harmonic_extension * selfr.wrk2.vec
+
+                        RHv._mv[i][:] = selfr.wrk2.components[0].vec
+
+            def rayleigh_nsa(selfr,
+                             ql,
+                             qr,
+                             qAq=not None,
+                             qBq=not None,
+                             workspace=None):
+                """
+                Return qAq[i, j] = (𝒜 qr[j], ql[i]) with 𝒜 =  (A - C D⁻¹ B) E
+                and qBq[i, j] = (M qr[j], ql[i]). """
+
+                if workspace is None:
+                    Aqr = ng.MultiVector(qr._mv[0], qr.m)
+                else:
+                    Aqr = workspace._mv[:qr.m]
+
+                with ng.TaskManager():
+                    if qAq is not None:
+                        Aqr[:] = A.mat * qr._mv
+                        for i in range(qr.m):
+                            selfr.tmpY1.vec.data = B.mat * qr._mv[i]
+                            # selfr.tmpY2.vec.data = Dinv * selfr.tmpY1.vec
+
+                            selfr.tmpY1.vec.data += \
+                                D.harmonic_extension_trans * selfr.tmpY1.vec
+                            selfr.tmpY2.vec.data = Dinv * selfr.tmpY1.vec
+                            selfr.tmpY2.vec.data += \
+                                D.inner_solve * selfr.tmpY1.vec
+                            selfr.tmpY2.vec.data += \
+                                D.harmonic_extension * selfr.tmpY2.vec
+
+                            selfr.tmpX1.vec.data = C.mat * selfr.tmpY2.vec
+                            Aqr[i].data -= selfr.tmpX1.vec
+                        qAq = ng.InnerProduct(Aqr, ql._mv).NumPy().T
+
+                    if qBq is not None:
+                        Bqr = Aqr
+                        Bqr[:] = M.mat * qr._mv
+                        qBq = ng.InnerProduct(Bqr, ql._mv).NumPy().T
+
+                return (qAq, qBq)
+
+            def rayleigh(selfr, q, workspace=None):
+                return selfr.rayleigh_nsa(q, q, workspace=workspace)
+
+        # resolvent class definition done -------------------------------
+
+        return ResolventVectorMode, M.mat, A.mat, B.mat, C.mat, D, Dinv
+
+    def guidedvecmodes(self,
+                       rad,
+                       ctr,
+                       p=3,
+                       seed=None,
+                       npts=8,
+                       nspan=20,
+                       within=None,
+                       rhoinv=0.0,
+                       quadrule='circ_trapez_shift',
+                       verbose=True,
+                       inverse='umfpack',
+                       **feastkwargs):
+        """
+        Capture guided vector modes whose non-dimensional resonance value Z²
+        is such that Z*Z is within the interval (ctr-rad, ctr+rad).
+        """
+
+        R, M, A, B, C, D, Dinv = self.vecmodesystem(p, inverse=inverse)
+        X, Y = R.XY.components
+        E = NGvecs(X, nspan, M=M)
+        E.setrandom(seed=seed)
+
+        print('Using FEAST to search for vector guided modes in')
+        print(f'circle of radius {rad} centered at {ctr}')
+        print(f'assuming not more than {nspan} modes in this interval.')
+        print(f'System size: {E.n} x {E.n}  Inverse type: {inverse}')
+
+        P = SpectralProjNGR(
+            lambda z: R(z, self.V, self.index, inverse=inverse),
+            radius=rad,
+            center=ctr,
+            npts=npts,
+            within=within,
+            rhoinv=rhoinv,
+            quadrule=quadrule,
+            verbose=verbose)
+        Zsqrs, E, history, _ = P.feast(E, **feastkwargs)
+        betas = self.betafrom(Zsqrs)
+
+        phi = NGvecs(Y, E.m)
+        BE = phi.zeroclone()
+        BE._mv[:] = -B * E._mv
+
+        BE._mv[:] += D.harmonic_extension_trans * BE._mv
+        phi._mv[:] = Dinv * BE._mv
+        phi._mv[:] += D.inner_solve * BE._mv
+        phi._mv[:] += D.harmonic_extension * phi._mv
+
+        return betas, Zsqrs, E, phi, R
+
+    # GUIDED MODES — Helicoidal #########################################
+
+    def guidedhelicalmodes(self,
+                           a,
+                           b,
+                           center,
+                           radius,
+                           p=4,
+                           npts=4,
+                           nspan=6,
+                           seed=1,
+                           verbose=True,
+                           **feastkwargs):
+        """
+        Find scalar (Helmholtz) guided modes propagating through a
+        helically coiled fiber following the theory in the paper
+        [Gopalakrishnan & Neunteufel, Guided modes of helical waveguides,
+        Wave Motion, 2025. https://doi.org/10.1016/j.wavemoti.2025.103621]
+
+        PARAMETERS
+        ----------
+        a: radius of the helix (bend radius) in meters
+
+        b: pitch of the helix (can be 0) in meters
+
+        center, radius: of circle in complex plane to search for eigenvalues
+
+        p: Lagrange finite element degree
+
+        npts, nspan, feastkwargs: number of quadrature points, intial span
+        dimension, and further keyword arguments to pass to feast eigensolver.
+        """
+
+        A, B, C, X = self.guidedhelicalsystem(a, b, p=p)
+        P = SpectralProjNGPoly([A, B, C],
+                               X,
+                               radius=radius,
+                               center=center,
+                               npts=npts,
+                               within=None,
+                               rhoinv=0.0,
+                               quadrule="circ_trapez_shift",
+                               verbose=verbose,
+                               checks=False)
+        Y = NGvecs(X**2, nspan)
+        Yl = Y.create()
+        Y.setrandom(seed=seed)
+        Yl.setrandom(seed=seed)
+        ews, Y, hist, Yl = P.feast(Y, Yl=Yl, hermitian=False, **feastkwargs)
+        if not hist[-1]:
+            warn('*** Feast iterations did not converge')
+        y = P.first(Y)
+        yl = P.last(Yl)
+
+        bdrnrm = self.boundarynorm(y)
+        if np.max(bdrnrm) > 1e-6:
+            warn('*** Mode boundary L2 norm > 1e-6!')
+
+        print('Results:\n ews:', ews)
+
+        return ews, y, yl, P
+
+    def guidedhelicalsystem(self, a, b, p=4):
+        """
+        Output A, B, C operators on finite element space X so that the
+        guided helical mode u is an eigenfuntion of the quadratic eigenvalue
+        problem (A + β B + β² C) u = 0  in X.
+        """
+        if self.ngspmlset:
+            raise RuntimeError('Do not use with ngsolve pml.')
+
+        ll = sqrt(a**2 + b**2)
+        T = 1 / ll * CF((
+            -a * sin(ng.z / ll),  # tangent of helical centerline
+            a * cos(ng.z / ll),
+            b))
+        N = -CF((
+            cos(ng.z / ll),  # normal of helical fiber centerline
+            sin(ng.z / ll),
+            0))
+        B = ng.Cross(T, N)  # binormal vector of fiber centerline
+
+        gamma = CF((
+            a * cos(ng.z / ll),  # parameterization of helix curve
+            a * sin(ng.z / ll),
+            b * ng.z / ll))
+
+        Phi = gamma + ng.x * N + ng.y * B  # parameterization of helix pipe
+
+        # Jacobian of untwisting map
+        F = CF((N, B, Phi.Diff(ng.z)), dims=(3, 3)).trans
+        C_inv = ng.Inv(F.trans * F)
+        d = C_inv * CF((0, 0, 1))
+        J = ng.Det(F)
+
+        X = ng.H1(self.mesh, order=p, dirichlet='OuterCircle', complex=True)
+        u, v = X.TnT()
+
+        with ng.TaskManager():
+
+            A = ng.BilinearForm(X)
+            A += (J * (C_inv[:2, :2] * grad(u)) * grad(v) -
+                  J * self.k**2 * self.index**2 * u * v) * dx(bonus_intorder=5)
+            A.Assemble()
+            B = ng.BilinearForm(X)
+            B += J * 1j * (u * d[:2] * grad(v) -
+                           v * d[:2] * grad(u)) * dx(bonus_intorder=5)
+            B.Assemble()
+            C = ng.BilinearForm(1 / J * u * v * dx(bonus_intorder=5))
+            C.Assemble()
+
+        return A, B, C, X
+
+    # ###################################################################
+    # LEAKY MODES  ######################################################
+
+    # LEAKY MODES — Polynomial PML ######################################
 
     def polypmlsystem(self, p, alpha=1):
         """
@@ -551,8 +1045,7 @@ class ModeSolver:
 
         return z, yl, y, P, Yl, Y
 
-    # ###################################################################
-    # NGSOLVE AUTOMATIC PML #############################################
+    # LEAKY MODES — Auto PML ############################################
 
     def autopmlsystem(self, p, alpha=1):
         """
@@ -657,8 +1150,73 @@ class ModeSolver:
 
         return zsqr, Y, Yl, beta, P
 
-    # ###################################################################
-    # SMOOTHER HANDMADE PML #############################################
+    def leakyvecmodes(self,
+                      rad,
+                      ctr,
+                      alpha=1,
+                      p=3,
+                      seed=1,
+                      npts=8,
+                      nspan=20,
+                      within=None,
+                      rhoinv=0.0,
+                      quadrule='circ_trapez_shift',
+                      verbose=True,
+                      inverse='umfpack',
+                      **feastkwargs):
+        """
+        Capture leaky vector modes whose non-dimensional resonance value Z²
+        is contained  within the circular contour centered at "ctr"
+        of radius "rad" in the Z² complex plane (not the Z-plane!).
+        """
+
+        R, M, A, B, C, D, Dinv = self.vecmodesystem(p,
+                                                    alpha=alpha,
+                                                    inverse=inverse)
+        X, Y = R.XY.components
+        E = NGvecs(X, nspan, M=M)
+        El = E.create()
+        E.setrandom(seed=seed)
+        El.setrandom(seed=seed)
+
+        print('Using FEAST to search for vector leaky modes in')
+        print('circle of radius', rad, 'centered at ', ctr)
+        print('assuming not more than %d modes in this interval' % nspan)
+        print('System size:', E.n, ' x ', E.n, '  Inverse type:', inverse)
+
+        P = SpectralProjNGR(
+            lambda z: R(z, self.V, self.index, inverse=inverse),
+            radius=rad,
+            center=ctr,
+            npts=npts,
+            within=within,
+            rhoinv=rhoinv,
+            quadrule=quadrule,
+            verbose=verbose)
+
+        Zsqrs, E, history, El = P.feast(E,
+                                        Yl=El,
+                                        hermitian=False,
+                                        **feastkwargs)
+        phi = NGvecs(Y, E.m)
+        BE = phi.zeroclone()
+        BE._mv[:] = -B * E._mv
+
+        BE._mv[:] += D.harmonic_extension_trans * BE._mv
+        phi._mv[:] = Dinv * BE._mv
+        phi._mv[:] += D.inner_solve * BE._mv
+        phi._mv[:] += D.harmonic_extension * phi._mv
+
+        betas = self.betafrom(Zsqrs)
+        print('Results:\n Z²:', Zsqrs)
+        print(' beta:', betas)
+        print(' CL dB/m:', 20 * betas.imag / np.log(10))
+
+        return betas, Zsqrs, E, phi, R
+
+    # LEAKY MODES — Smooth PML ##########################################
+
+    # -- Infrastructure -------------------------------------------------
 
     def smoothpmlsymb(self, alpha, pmlbegin, pmlend):
         """
@@ -1020,8 +1578,7 @@ class ModeSolver:
 
         return ResolventVectorMode, dinv
 
-    # ###################################################################
-    # # PML SYSTEMS #####################################################
+    # -- System builders -------------------------------------------------
 
     def smoothpmlsystem(self,
                         p,
@@ -1283,8 +1840,7 @@ class ModeSolver:
 
         return res, m, a, b, c, d, dinv
 
-    # ###################################################################
-    # # LEAKY MODES #####################################################
+    # -- Solvers ---------------------------------------------------------
 
     def leakymode_smooth(self,
                          p,
@@ -1561,427 +2117,7 @@ class ModeSolver:
         return zsqr, E_r, E_l, beta, P, moreoutputs
 
     # ###################################################################
-    # GUIDED LP MODES FROM SELFADJOINT EIGENPROBLEM #####################
-
-    def selfadjsystem(self, p):
-
-        if self.ngspmlset:
-            raise RuntimeError('NGSolve pml mesh trafo set.')
-
-        X = ng.H1(self.mesh, order=p, dirichlet='OuterCircle', complex=True)
-        u, v = X.TnT()
-        A = ng.BilinearForm(X)
-        A += grad(u) * grad(v) * dx + self.V * u * v * dx
-        B = ng.BilinearForm(X)
-        B += u * v * dx
-
-        with ng.TaskManager():
-            try:
-                A.Assemble()
-                B.Assemble()
-            except Exception:
-                print('*** Trying again with larger heap')
-                ng.SetHeapSize(int(1e9))
-                A.Assemble()
-                B.Assemble()
-
-        return A, B, X
-
-    def selfadjmodes(self,
-                     interval=(-10, 0),
-                     p=3,
-                     seed=1,
-                     npts=20,
-                     nspan=15,
-                     within=None,
-                     rhoinv=0.0,
-                     quadrule='circ_trapez_shift',
-                     verbose=True,
-                     inverse='umfpack',
-                     **feastkwargs):
-        """
-        Search for guided modes in a given "interval", which is to be
-        input as a tuple: interval=(left, right). These modes solve
-
-        -Δu + V u = Z² u
-
-        with zero dirichlet boundary conditions (no PML, no loss) at the
-        outer boundary of the computational domain.
-
-        The computation is done using Lagrangre finite elements of degree "p"
-        (with no PML) using selfadjoint FEAST with a random span of "nspan"
-        vectors (and using the remaining parameters, which are simply
-        passed to feast).
-
-        OUTPUTS:
-
-        betas, Zsqrs, Y:
-            betas[i] give the i-th real-valued propagation constant, and
-            Zsqrs[i] gives the feast-computed i-th nondimensional Z² value
-            in "interval". The corresponding eigenmode is i-th component
-            of the span object Y.
-
-        """
-
-        a, b, X = self.selfadjsystem(p)
-        left, right = interval
-        print('Running selfadjoint FEAST to capture guided modes in ' +
-              '({},{})'.format(left, right))
-        print('assuming not more than nspan=%d modes in this interval' % nspan)
-        ctr = (right + left) / 2
-        rad = (right - left) / 2
-        P = SpectralProjNG(X,
-                           a.mat,
-                           b.mat,
-                           radius=rad,
-                           center=ctr,
-                           npts=npts,
-                           reduce_sym=True,
-                           within=within,
-                           rhoinv=rhoinv,
-                           quadrule=quadrule,
-                           inverse=inverse,
-                           verbose=verbose)
-        Y = NGvecs(X, nspan, M=b.mat)
-        Y.setrandom(seed=seed)
-        Zsqrs, Y, history, _ = P.feast(Y, hermitian=True, **feastkwargs)
-        betas = self.betafrom(Zsqrs)
-
-        return betas, Zsqrs, Y
-
-    # ###################################################################
-    # VECTOR MODES
-
-    def vecmodesystem(self, p, alpha=None, inverse=None):
-        """
-        Prepare eigensystem and resolvents for solving for vector modes.
-
-        INPUTS:
-
-        p: Determines degree of Nedelec x Lagrange space system.
-           This should be an integer >= 0.
-
-        alpha: If alpha is None, prepare system for vector guided modes.
-           If alpha is a positive number, use it as PML strength and
-           prepare system for leaky modes using NGSolve's automatic
-           mesh-based PML.
-        """
-
-        if alpha is not None:
-            self.ngspmlset = True
-            radial = ng.pml.Radial(rad=self.R, alpha=alpha * 1j, origin=(0, 0))
-            self.mesh.SetPML(radial, 'Outer')
-            print('Set NGSolve automatic PML with p=', p, ' alpha=', alpha,
-                  'and thickness=%.3f' % (self.Rout - self.R))
-        elif self.ngspmlset:
-            raise RuntimeError('Unexpected NGSolve pml mesh trafo here.')
-
-        n = self.index
-        n2 = n * n
-        X = ng.HCurl(self.mesh,
-                     order=p + 1 - max(1 - p, 0),
-                     type1=True,
-                     dirichlet='OuterCircle',
-                     complex=True)
-        Y = ng.H1(self.mesh,
-                  order=p + 1,
-                  dirichlet='OuterCircle',
-                  complex=True)
-        E, v = X.TnT()
-        phi, psi = Y.TnT()
-
-        A = ng.BilinearForm(X)
-        A += (curl(E) * curl(v) + self.V * E * v) * dx
-        M = ng.BilinearForm(X)
-        M += E * v * dx
-        C = ng.BilinearForm(trialspace=Y, testspace=X)
-        C += grad(phi) * v * dx
-        B = ng.BilinearForm(trialspace=X, testspace=Y)
-        B += -n2 * E * grad(psi) * dx
-        D = ng.BilinearForm(Y, condense=True)
-        D += n2 * phi * psi * dx
-
-        with ng.TaskManager():
-            try:
-                A.Assemble()
-                M.Assemble()
-                B.Assemble()
-                C.Assemble()
-                D.Assemble()
-            except Exception:
-                print('*** Trying again with larger heap')
-                ng.SetHeapSize(int(1e9))
-                A.Assemble()
-                M.Assemble()
-                B.Assemble()
-                C.Assemble()
-                D.Assemble()
-            # Dinv = D.mat.Inverse(Y.FreeDofs(), inverse=inverse)
-            Dinv = D.mat.Inverse(Y.FreeDofs(coupling=True), inverse=inverse)
-
-        # resolvent of the vector mode problem --------------------------
-        class ResolventVectorMode():
-
-            # static resolvent class attributes, same for all class objects
-            XY = ng.FESpace([X, Y])
-            wrk1 = ng.GridFunction(XY)
-            wrk2 = ng.GridFunction(XY)
-            tmpY1 = ng.GridFunction(Y)
-            tmpY2 = ng.GridFunction(Y)
-            tmpX1 = ng.GridFunction(X)
-
-            def __init__(selfr, z, V, n, inverse=None):
-                n2 = n * n
-                XY = ng.FESpace([X, Y])
-                (E, phi), (v, psi) = XY.TnT()
-
-                # selfr.zminusOp = ng.BilinearForm(XY)
-                # selfr.zminusOp += (z * E * v - curl(E) * curl(v)
-                #                    - V * E * v - grad(phi) * v
-                #                    - n2 * phi * psi + n2 * E * grad(psi))
-                # * dx
-                # with ng.TaskManager():
-                #     try:
-                #         selfr.zminusOp.Assemble()
-                #     except Exception:
-                #         print('*** Trying again with larger heap')
-                #         ng.SetHeapSize(int(1e9))
-                #         selfr.zminusOp.Assemble()
-                #     selfr.R = selfr.zminusOp.mat.Inverse(XY.FreeDofs(),
-                #                                          inverse=inverse)
-
-                selfr.Z = ng.BilinearForm(XY, condense=True)
-                selfr.Z += (z * E * v - curl(E) * curl(v) - V * E * v -
-                            grad(phi) * v - n2 * phi * psi +
-                            n2 * E * grad(psi)) * dx
-                selfr.ZH = ng.BilinearForm(XY, condense=True)
-                selfr.ZH += (np.conjugate(z) * E * v - curl(E) * curl(v) -
-                             V * E * v - grad(psi) * E - n2 * phi * psi +
-                             n2 * v * grad(phi)) * dx
-                with ng.TaskManager():
-                    try:
-                        selfr.Z.Assemble()
-                        selfr.ZH.Assemble()
-                    except Exception:
-                        print('*** Trying again with larger heap')
-                        ng.SetHeapSize(int(1e9))
-                        selfr.Z.Assemble()
-                        selfr.ZH.Assemble()
-                    selfr.R_I = selfr.Z.mat.Inverse(XY.FreeDofs(coupling=True),
-                                                    inverse=inverse)
-
-            def act(selfr, v, Rv, workspace=None):
-                if workspace is None:
-                    Mv = ng.MultiVector(v._mv[0], v.m)
-                else:
-                    Mv = workspace._mv[:v.m]
-
-                with ng.TaskManager():
-                    Mv[:] = M.mat * v._mv
-                    for i in range(v.m):
-                        selfr.wrk1.components[0].vec[:] = Mv[i]
-                        selfr.wrk1.components[1].vec[:] = 0
-
-                        # selfr.wrk2.vec.data = selfr.R * selfr.wrk1.vec
-
-                        selfr.wrk1.vec.data += \
-                            selfr.Z.harmonic_extension_trans * selfr.wrk1.vec
-                        selfr.wrk2.vec.data = selfr.R_I * selfr.wrk1.vec
-                        selfr.wrk2.vec.data += \
-                            selfr.Z.inner_solve * selfr.wrk1.vec
-                        selfr.wrk2.vec.data += \
-                            selfr.Z.harmonic_extension * selfr.wrk2.vec
-
-                        Rv._mv[i][:] = selfr.wrk2.components[0].vec
-
-            def adj(selfr, v, RHv, workspace=None):
-                if workspace is None:
-                    Mv = ng.MultiVector(v._mv[0], v.m)
-                else:
-                    Mv = workspace._mv[:v.m]
-                with ng.TaskManager():
-                    Mv[:] = M.mat * v._mv
-                    for i in range(v.m):
-                        selfr.wrk1.components[0].vec[:] = Mv[i]
-                        selfr.wrk1.components[1].vec[:] = 0
-
-                        # selfr.wrk2.vec.data = selfr.R.H * selfr.wrk1.vec
-
-                        selfr.wrk1.vec.data += \
-                            selfr.ZH.harmonic_extension_trans * selfr.wrk1.vec
-                        selfr.wrk2.vec.data = selfr.R_I.H * selfr.wrk1.vec
-                        selfr.wrk2.vec.data += \
-                            selfr.ZH.inner_solve * selfr.wrk1.vec
-                        selfr.wrk2.vec.data += \
-                            selfr.ZH.harmonic_extension * selfr.wrk2.vec
-
-                        RHv._mv[i][:] = selfr.wrk2.components[0].vec
-
-            def rayleigh_nsa(selfr,
-                             ql,
-                             qr,
-                             qAq=not None,
-                             qBq=not None,
-                             workspace=None):
-                """
-                Return qAq[i, j] = (𝒜 qr[j], ql[i]) with 𝒜 =  (A - C D⁻¹ B) E
-                and qBq[i, j] = (M qr[j], ql[i]). """
-
-                if workspace is None:
-                    Aqr = ng.MultiVector(qr._mv[0], qr.m)
-                else:
-                    Aqr = workspace._mv[:qr.m]
-
-                with ng.TaskManager():
-                    if qAq is not None:
-                        Aqr[:] = A.mat * qr._mv
-                        for i in range(qr.m):
-                            selfr.tmpY1.vec.data = B.mat * qr._mv[i]
-                            # selfr.tmpY2.vec.data = Dinv * selfr.tmpY1.vec
-
-                            selfr.tmpY1.vec.data += \
-                                D.harmonic_extension_trans * selfr.tmpY1.vec
-                            selfr.tmpY2.vec.data = Dinv * selfr.tmpY1.vec
-                            selfr.tmpY2.vec.data += \
-                                D.inner_solve * selfr.tmpY1.vec
-                            selfr.tmpY2.vec.data += \
-                                D.harmonic_extension * selfr.tmpY2.vec
-
-                            selfr.tmpX1.vec.data = C.mat * selfr.tmpY2.vec
-                            Aqr[i].data -= selfr.tmpX1.vec
-                        qAq = ng.InnerProduct(Aqr, ql._mv).NumPy().T
-
-                    if qBq is not None:
-                        Bqr = Aqr
-                        Bqr[:] = M.mat * qr._mv
-                        qBq = ng.InnerProduct(Bqr, ql._mv).NumPy().T
-
-                return (qAq, qBq)
-
-            def rayleigh(selfr, q, workspace=None):
-                return selfr.rayleigh_nsa(q, q, workspace=workspace)
-
-        # resolvent class definition done -------------------------------
-
-        return ResolventVectorMode, M.mat, A.mat, B.mat, C.mat, D, Dinv
-
-    def guidedvecmodes(self,
-                       rad,
-                       ctr,
-                       p=3,
-                       seed=None,
-                       npts=8,
-                       nspan=20,
-                       within=None,
-                       rhoinv=0.0,
-                       quadrule='circ_trapez_shift',
-                       verbose=True,
-                       inverse='umfpack',
-                       **feastkwargs):
-        """
-        Capture guided vector modes whose non-dimensional resonance value Z²
-        is such that Z*Z is within the interval (ctr-rad, ctr+rad).
-        """
-
-        R, M, A, B, C, D, Dinv = self.vecmodesystem(p, inverse=inverse)
-        X, Y = R.XY.components
-        E = NGvecs(X, nspan, M=M)
-        E.setrandom(seed=seed)
-
-        print('Using FEAST to search for vector guided modes in')
-        print(f'circle of radius {rad} centered at {ctr}')
-        print(f'assuming not more than {nspan} modes in this interval.')
-        print(f'System size: {E.n} x {E.n}  Inverse type: {inverse}')
-
-        P = SpectralProjNGR(
-            lambda z: R(z, self.V, self.index, inverse=inverse),
-            radius=rad,
-            center=ctr,
-            npts=npts,
-            within=within,
-            rhoinv=rhoinv,
-            quadrule=quadrule,
-            verbose=verbose)
-        Zsqrs, E, history, _ = P.feast(E, **feastkwargs)
-        betas = self.betafrom(Zsqrs)
-
-        phi = NGvecs(Y, E.m)
-        BE = phi.zeroclone()
-        BE._mv[:] = -B * E._mv
-
-        BE._mv[:] += D.harmonic_extension_trans * BE._mv
-        phi._mv[:] = Dinv * BE._mv
-        phi._mv[:] += D.inner_solve * BE._mv
-        phi._mv[:] += D.harmonic_extension * phi._mv
-
-        return betas, Zsqrs, E, phi, R
-
-    def leakyvecmodes(self,
-                      rad,
-                      ctr,
-                      alpha=1,
-                      p=3,
-                      seed=1,
-                      npts=8,
-                      nspan=20,
-                      within=None,
-                      rhoinv=0.0,
-                      quadrule='circ_trapez_shift',
-                      verbose=True,
-                      inverse='umfpack',
-                      **feastkwargs):
-        """
-        Capture leaky vector modes whose non-dimensional resonance value Z²
-        is contained  within the circular contour centered at "ctr"
-        of radius "rad" in the Z² complex plane (not the Z-plane!).
-        """
-
-        R, M, A, B, C, D, Dinv = self.vecmodesystem(p,
-                                                    alpha=alpha,
-                                                    inverse=inverse)
-        X, Y = R.XY.components
-        E = NGvecs(X, nspan, M=M)
-        El = E.create()
-        E.setrandom(seed=seed)
-        El.setrandom(seed=seed)
-
-        print('Using FEAST to search for vector leaky modes in')
-        print('circle of radius', rad, 'centered at ', ctr)
-        print('assuming not more than %d modes in this interval' % nspan)
-        print('System size:', E.n, ' x ', E.n, '  Inverse type:', inverse)
-
-        P = SpectralProjNGR(
-            lambda z: R(z, self.V, self.index, inverse=inverse),
-            radius=rad,
-            center=ctr,
-            npts=npts,
-            within=within,
-            rhoinv=rhoinv,
-            quadrule=quadrule,
-            verbose=verbose)
-
-        Zsqrs, E, history, El = P.feast(E,
-                                        Yl=El,
-                                        hermitian=False,
-                                        **feastkwargs)
-        phi = NGvecs(Y, E.m)
-        BE = phi.zeroclone()
-        BE._mv[:] = -B * E._mv
-
-        BE._mv[:] += D.harmonic_extension_trans * BE._mv
-        phi._mv[:] = Dinv * BE._mv
-        phi._mv[:] += D.inner_solve * BE._mv
-        phi._mv[:] += D.harmonic_extension * phi._mv
-
-        betas = self.betafrom(Zsqrs)
-        print('Results:\n Z²:', Zsqrs)
-        print(' beta:', betas)
-        print(' CL dB/m:', 20 * betas.imag / np.log(10))
-
-        return betas, Zsqrs, E, phi, R
-
-    # ###################################################################
-    # ERROR ESTIMATORS AND ADAPTIVITY ###################################
+    # ADAPTIVITY BY DWR  ################################################
 
     def eestimator_maxwell(self, rgt, lft, lam):
         """
@@ -2641,118 +2777,7 @@ class ModeSolver:
         return Zsqrs, ndofs, Yr, Yl, beta, P
 
     # ###################################################################
-    # BENT MODES
-
-    def guidedhelicalmodes(self,
-                           a,
-                           b,
-                           center,
-                           radius,
-                           p=4,
-                           npts=4,
-                           nspan=6,
-                           seed=1,
-                           verbose=True,
-                           **feastkwargs):
-        """
-        Find scalar (Helmholtz) guided modes propagating through a
-        helically coiled fiber following the theory in the paper
-        [Gopalakrishnan & Neunteufel, Guided modes of helical waveguides,
-        Wave Motion, 2025. https://doi.org/10.1016/j.wavemoti.2025.103621]
-
-        PARAMETERS
-        ----------
-        a: radius of the helix (bend radius) in meters
-
-        b: pitch of the helix (can be 0) in meters
-
-        center, radius: of circle in complex plane to search for eigenvalues
-
-        p: Lagrange finite element degree
-
-        npts, nspan, feastkwargs: number of quadrature points, intial span
-        dimension, and further keyword arguments to pass to feast eigensolver.
-        """
-
-        A, B, C, X = self.guidedhelicalsystem(a, b, p=p)
-        P = SpectralProjNGPoly([A, B, C],
-                               X,
-                               radius=radius,
-                               center=center,
-                               npts=npts,
-                               within=None,
-                               rhoinv=0.0,
-                               quadrule="circ_trapez_shift",
-                               verbose=verbose,
-                               checks=False)
-        Y = NGvecs(X**2, nspan)
-        Yl = Y.create()
-        Y.setrandom(seed=seed)
-        Yl.setrandom(seed=seed)
-        ews, Y, hist, Yl = P.feast(Y, Yl=Yl, hermitian=False, **feastkwargs)
-        if not hist[-1]:
-            warn('*** Feast iterations did not converge')
-        y = P.first(Y)
-        yl = P.last(Yl)
-
-        bdrnrm = self.boundarynorm(y)
-        if np.max(bdrnrm) > 1e-6:
-            warn('*** Mode boundary L2 norm > 1e-6!')
-
-        print('Results:\n ews:', ews)
-
-        return ews, y, yl, P
-
-    def guidedhelicalsystem(self, a, b, p=4):
-        """
-        Output A, B, C operators on finite element space X so that the
-        guided helical mode u is an eigenfuntion of the quadratic eigenvalue
-        problem (A + β B + β² C) u = 0  in X.
-        """
-        if self.ngspmlset:
-            raise RuntimeError('Do not use with ngsolve pml.')
-
-        ll = sqrt(a**2 + b**2)
-        T = 1 / ll * CF((
-            -a * sin(ng.z / ll),  # tangent of helical centerline
-            a * cos(ng.z / ll),
-            b))
-        N = -CF((
-            cos(ng.z / ll),  # normal of helical fiber centerline
-            sin(ng.z / ll),
-            0))
-        B = ng.Cross(T, N)  # binormal vector of fiber centerline
-
-        gamma = CF((
-            a * cos(ng.z / ll),  # parameterization of helix curve
-            a * sin(ng.z / ll),
-            b * ng.z / ll))
-
-        Phi = gamma + ng.x * N + ng.y * B  # parameterization of helix pipe
-
-        # Jacobian of untwisting map
-        F = CF((N, B, Phi.Diff(ng.z)), dims=(3, 3)).trans
-        C_inv = ng.Inv(F.trans * F)
-        d = C_inv * CF((0, 0, 1))
-        J = ng.Det(F)
-
-        X = ng.H1(self.mesh, order=p, dirichlet='OuterCircle', complex=True)
-        u, v = X.TnT()
-
-        with ng.TaskManager():
-
-            A = ng.BilinearForm(X)
-            A += (J * (C_inv[:2, :2] * grad(u)) * grad(v) -
-                  J * self.k**2 * self.index**2 * u * v) * dx(bonus_intorder=5)
-            A.Assemble()
-            B = ng.BilinearForm(X)
-            B += J * 1j * (u * d[:2] * grad(v) -
-                           v * d[:2] * grad(u)) * dx(bonus_intorder=5)
-            B.Assemble()
-            C = ng.BilinearForm(1 / J * u * v * dx(bonus_intorder=5))
-            C.Assemble()
-
-        return A, B, C, X
+    # BENT MODES ########################################################
 
     # OLD STUFF BELOW: SLATED FOR REMOVAL !
 
