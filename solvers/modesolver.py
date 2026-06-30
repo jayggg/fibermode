@@ -299,6 +299,12 @@ class ModeSolver:
         AA[0] += s * (R - 2 * r) / r**3 * (x * ux + y * uy) * (x * vx +
                                                                y * vy) * dx_pml
         AA[0] += -s**3 * (r - R)**2 / (R * r) * u * v * dx_pml
+        AA[0] += 0 * u * v * dx
+
+        # I always thought sparsity in ngsolve is based on the FE space only,
+        # not the integrators, but that seems to be no longer accurate today.
+        # To force AA[i]'s to be of the same sparsity, I am having to add
+        # this 0 * u * v * dx.
 
         AA += [ng.BilinearForm(X)]
         AA[1] += grad(u) * grad(v) * dx_int
@@ -307,13 +313,16 @@ class ModeSolver:
                                                            y * vy) * dx_pml
         AA[1] += 1 / r**2 * (x * ux + y * uy) * v * dx_pml
         AA[1] += -2 * s * s * (r - R) / r * u * v * dx_pml
+        AA[1] += 0 * u * v * dx
 
         AA += [ng.BilinearForm(X, check_unused=False)]
         AA[2] += R / s / r**3 * (x * ux + y * uy) * (x * vx + y * vy) * dx_pml
         AA[2] += -R * s / r * u * v * dx_pml
+        AA[2] += 0 * u * v * dx
 
         AA += [ng.BilinearForm(X, check_unused=False)]
         AA[3] += -u * v * dx_int
+        AA[3] += 0 * u * v * dx
 
         with ng.TaskManager():
             for i in range(len(AA)):
@@ -323,7 +332,6 @@ class ModeSolver:
                     print('*** Trying again with larger heap')
                     ng.SetHeapSize(int(1e9))
                     AA[i].Assemble()
-
         return AA, X
 
     def leakymode(self,
@@ -1559,251 +1567,6 @@ class ModeSolver:
         return zsqr, E_r, E_l, beta, P, moreoutputs
 
     # ###################################################################
-    # ERROR ESTIMATORS FOR ADAPTIVITY ###################################
-
-    def eestimator_maxwell(self, rgt, lft, lam):
-        """
-        DWR error estimator for Maxwell eigenproblem in compound
-        form. We write eta = eta_1 + eta_2 + eta_3, where
-            eta_i = sqrt(Omega_i_R * Rho_i_R) + sqrt(Omega_i_L * Rho_i_L)
-        INPUT:
-        * lft: left eigenfunction as NGvecs object for the compound form
-        * rgt: right eigenfunction as NGvecs object for the compound form
-        * lam: eigenvalue
-        OUTPUT:
-        * Eta: element-wise error estimator
-        * Etas: dictionary with more info (see code)
-        """
-
-        assert rgt.m == lft.m and len(lam) == rgt.m, \
-            'Check FEAST output:\n' + f'rgt.m {rgt.m} != lft.m {lft.m}'
-
-        if self.gamma is None:
-            raise ValueError('PML coefficients not set. Use set_vecpml_coeff.')
-
-        eta1s = []
-        eta2s = []
-        eta3s = []
-        kappa = self.kappa
-        gamma = self.gamma
-        detj = self.detj
-        kappabar = self.kappa_conj
-        gammabar = self.gamma_conj
-        detjbar = self.detj_conj
-
-        h = ng.specialcf.mesh_size
-        n = ng.specialcf.normal(self.mesh.dim)
-        n2 = self.index * self.index
-        W = ng.L2(self.mesh, order=self.p, complex=True)
-        kcurlE = ng.GridFunction(W)
-        W2 = ng.HDiv(self.mesh,
-                     order=self.p + 1,
-                     complex=True,
-                     discontinuous=True)
-        flux = ng.GridFunction(W2)
-
-        for i in range(rgt.m):
-
-            R = rgt.gridfun('R', i=i)
-            L = lft.gridfun('L', i=i)
-            Z2 = lam[i]
-            ER = R.components[0]
-            EL = L.components[0]
-            phiR = R.components[1]
-            phiL = L.components[1]
-            V = self.V
-
-            with ng.TaskManager():
-
-                kcurlE.Set(kappa * curl(ER))
-                gradkcurlER = grad(kcurlE)
-                rotkcurlER = CF((gradkcurlER[1], -gradkcurlER[0]))
-                ggphiR = gamma * grad(phiR)
-                rho1Ri = rotkcurlER + ggphiR + (V - Z2) * gamma * ER
-                rho1Rj = kcurlE - kcurlE.Other()
-                rho1Rint = h * h * InnerProduct(rho1Ri, rho1Ri)
-                rho1Rjmp = 0.5 * h * rho1Rj * Conj(rho1Rj)
-                Rho1R = Integrate(rho1Rint * dx +
-                                  rho1Rjmp * dx(element_boundary=True),
-                                  self.mesh,
-                                  element_wise=True)
-
-                flux.Set(ggphiR + (V - Z2) * gamma * ER)
-                divEphiR = div(flux)
-                rho2Rj = (flux - flux.Other()) * n
-                rho2Rint = h * h * divEphiR * Conj(divEphiR)
-                rho2Rjmp = 0.5 * h * rho2Rj * Conj(rho2Rj)
-                Rho2R = Integrate(rho2Rint * dx +
-                                  rho2Rjmp * dx(element_boundary=True),
-                                  self.mesh,
-                                  element_wise=True)
-
-                flux.Set(n2 * gamma * ER)
-                divngER = div(flux)
-                rho3Ri = n2 * detj * phiR + divngER
-                rho3Rj = (flux - flux.Other()) * n
-                rho3Rint = h * h * rho3Ri * Conj(rho3Ri)
-                rho3Rjmp = 0.5 * h * rho3Rj * Conj(rho3Rj)
-                Rho3R = Integrate(rho3Rint * dx +
-                                  rho3Rjmp * dx(element_boundary=True),
-                                  self.mesh,
-                                  element_wise=True)
-
-                Omega1R = Integrate(InnerProduct(curl(ER), curl(ER)) * dx,
-                                    self.mesh,
-                                    element_wise=True)
-                Omega2R = Integrate(InnerProduct(ER, ER) * dx,
-                                    self.mesh,
-                                    element_wise=True)
-                Omega3R = Integrate(InnerProduct(grad(phiR), grad(phiR)) * dx,
-                                    self.mesh,
-                                    element_wise=True)
-
-                kcurlE.Set(kappabar * curl(EL))
-                gradkcurlEL = grad(kcurlE)
-                rotkcurlEL = CF((gradkcurlEL[1], -gradkcurlEL[0]))
-                rho1Li = rotkcurlEL + n2 * gammabar * grad(phiL) + \
-                    (V - Z2.conjugate()) * gammabar * EL
-                rho1Lj = kcurlE - kcurlE.Other()
-                rho1Lint = h * h * InnerProduct(rho1Li, rho1Li)
-                rho1Ljmp = 0.5 * h * rho1Lj * Conj(rho1Lj)
-                Rho1L = Integrate(rho1Lint * dx +
-                                  rho1Ljmp * dx(element_boundary=True),
-                                  self.mesh,
-                                  element_wise=True)
-
-                flux.Set(n2 * gammabar * grad(phiL) +
-                         (V - Z2.conjugate()) * gammabar * EL)
-                divEphiL = div(flux)
-                rho2Lj = (flux - flux.Other()) * n
-                rho2Lint = h * h * divEphiL * Conj(divEphiL)
-                rho2Ljmp = 0.5 * h * rho2Lj * Conj(rho2Lj)
-                Rho2L = Integrate(rho2Lint * dx +
-                                  rho2Ljmp * dx(element_boundary=True),
-                                  self.mesh,
-                                  element_wise=True)
-
-                flux.Set(gammabar * EL)
-                divgEL = div(flux)
-                rho3Li = n2 * detjbar * phiL + divgEL
-                rho3Lj = (flux - flux.Other()) * n
-                rho3Lint = h * h * rho3Li * Conj(rho3Li)
-                rho3Ljmp = 0.5 * h * rho3Lj * Conj(rho3Lj)
-                Rho3L = Integrate(rho3Lint * dx +
-                                  rho3Ljmp * dx(element_boundary=True),
-                                  self.mesh,
-                                  element_wise=True)
-
-                Omega1L = Integrate(InnerProduct(curl(EL), curl(EL)) * dx,
-                                    self.mesh,
-                                    element_wise=True)
-                Omega2L = Integrate(InnerProduct(EL, EL) * dx,
-                                    self.mesh,
-                                    element_wise=True)
-                Omega3L = Integrate(InnerProduct(grad(phiL), grad(phiL)) * dx,
-                                    self.mesh,
-                                    element_wise=True)
-
-                Eta1 = np.sqrt(Omega1L.real.NumPy() * Rho1R.real.NumPy())
-                Eta1 += np.sqrt(Omega1R.real.NumPy() * Rho1L.real.NumPy())
-                eta1s.append(Eta1)
-
-                Eta2 = np.sqrt(Omega2L.real.NumPy() * Rho2R.real.NumPy())
-                Eta2 += np.sqrt(Omega2R.real.NumPy() * Rho2L.real.NumPy())
-                eta2s.append(Eta2)
-
-                Eta3 = np.sqrt(Omega3L.real.NumPy() * Rho3R.real.NumPy())
-                Eta3 += np.sqrt(Omega3R.real.NumPy() * Rho3L.real.NumPy())
-                eta3s.append(Eta3)
-
-        Eta = np.zeros_like(eta1s[0])
-        Eta1 = np.zeros_like(Eta)
-        Eta2 = np.zeros_like(Eta)
-        Eta3 = np.zeros_like(Eta)
-        for i in range(rgt.m):
-            Eta1 += eta1s[i]
-            Eta2 += eta2s[i]
-            Eta3 += eta3s[i]
-        Eta = Eta1 + Eta2 + Eta3
-
-        Etas = {
-            'eta1s': eta1s,
-            'eta2s': eta2s,
-            'eta3s': eta3s,
-            'Eta1': (Eta1, np.max(Eta1)),
-            'Eta2': (Eta2, np.max(Eta2)),
-            'Eta3': (Eta3, np.max(Eta3)),
-        }
-
-        return Eta, Etas
-
-    def eestimator_helmholtz(self, rgt, lft, lam, A, B, V):
-        """
-        DWR error estimator for eigenvalues
-
-        INPUT:
-        * lft: left eigenfunction as NGvecs object
-        * rgt: right eigenfunction as NGvecs object
-        * lam: eigenvalue
-        * A, B, V are such that the eigenproblem is
-          -div(A grad u) + V B u = lam B  u
-
-        OUTPUT:
-        * ee: element-wise error estimator
-        """
-        assert rgt.m == lft.m, 'Check FEAST output:\n' + \
-            f'rgt.m {rgt.m} != lft.m {lft.m}'
-        if rgt.m > 1 or lft.m > 1:
-            raise NotImplementedError()
-
-        R = rgt.gridfun('R', i=0)
-        L = lft.gridfun('L', i=0)
-        h = ng.specialcf.mesh_size
-        n = ng.specialcf.normal(self.mesh.dim)
-
-        AgradR = A * grad(R)
-        divAgradR = AgradR[0].Diff(ng.x) + AgradR[1].Diff(ng.y)
-        AgradL = A * grad(L)
-        divAgradL = AgradL[0].Diff(ng.x) + AgradL[1].Diff(ng.y)
-
-        r = h * (divAgradR - V * B * R + lam * R)
-        rhoR = Integrate(InnerProduct(r, r) * dx, self.mesh, element_wise=True)
-        r = h * (divAgradL - V * B * L + np.conj(lam) * L)
-        rhoL = Integrate(InnerProduct(r, r) * dx, self.mesh, element_wise=True)
-        jR = n * (AgradR - AgradR.Other())
-        jL = n * (AgradL - AgradL.Other())
-        rhoR += Integrate(0.5 * h * InnerProduct(jR, jR) *
-                          dx(element_boundary=True),
-                          self.mesh,
-                          element_wise=True)
-        rhoL += Integrate(0.5 * h * InnerProduct(jL, jL) *
-                          dx(element_boundary=True),
-                          self.mesh,
-                          element_wise=True)
-
-        # left as a reminder
-        # def hess(gf):
-        #     return gf.Operator("hesse")
-        # omegaR = Integrate(h * h * InnerProduct(hess(R), hess(R)),
-        #                    self.mesh,
-        #                    element_wise=True)
-        # omegaL = Integrate(h * h * InnerProduct(hess(L), hess(L)),
-        #                    self.mesh,
-        #                    element_wise=True)
-
-        omegaR = Integrate(h * InnerProduct(grad(R), grad(R)),
-                           self.mesh,
-                           element_wise=True)
-        omegaL = Integrate(h * InnerProduct(grad(L), grad(L)),
-                           self.mesh,
-                           element_wise=True)
-
-        ee = np.sqrt(omegaR.real.NumPy() * rhoR.real.NumPy())
-        ee += np.sqrt(omegaL.real.NumPy() * rhoL.real.NumPy())
-
-        return ee
-
-    # ###################################################################
     # GUIDED LP MODES FROM SELFADJOINT EIGENPROBLEM #####################
 
     def selfadjsystem(self, p):
@@ -2226,8 +1989,16 @@ class ModeSolver:
     # ###################################################################
     # BENT MODES
 
-    def guidedhelicalmodes(self, a, b, center, radius,
-                           p=4, seed=1, npts=4, nspan=6, verbose=True,
+    def guidedhelicalmodes(self,
+                           a,
+                           b,
+                           center,
+                           radius,
+                           p=4,
+                           npts=4,
+                           nspan=6,
+                           seed=1,
+                           verbose=True,
                            **feastkwargs):
         """
         Find scalar (Helmholtz) guided modes propagating through a
@@ -2237,18 +2008,26 @@ class ModeSolver:
 
         PARAMETERS
         ----------
-        a: radius of the helix (bend radius)
-        b: pitch of the helix (can be 0)
+        a: radius of the helix (bend radius) in meters
+
+        b: pitch of the helix (can be 0) in meters
+
         center, radius: of circle in complex plane to search for eigenvalues
+
         p: Lagrange finite element degree
+
         npts, nspan, feastkwargs: number of quadrature points, intial span
         dimension, and further keyword arguments to pass to feast eigensolver.
         """
 
         A, B, C, X = self.guidedhelicalsystem(a, b, p=p)
-        P = SpectralProjNGPoly([A, B, C], X,
-                               radius=radius, center=center, npts=npts,
-                               within=None, rhoinv=0.0,
+        P = SpectralProjNGPoly([A, B, C],
+                               X,
+                               radius=radius,
+                               center=center,
+                               npts=npts,
+                               within=None,
+                               rhoinv=0.0,
                                quadrule="circ_trapez_shift",
                                verbose=verbose,
                                checks=False)
@@ -2270,34 +2049,37 @@ class ModeSolver:
 
         return ews, y, yl, P
 
-    def guidedhelicalsystem(self, a, b, p=4, **kwargs):
+    def guidedhelicalsystem(self, a, b, p=4):
         """
-        Output the A, B, C matrices and finite element space X so that the
-        guided helical modes are eigenvalues of the quadratic eigenvalue
-        problem (A + λB + λ²C) u = 0  in X.
+        Output A, B, C operators on finite element space X so that the
+        guided helical mode u is an eigenfuntion of the quadratic eigenvalue
+        problem (A + β B + β² C) u = 0  in X.
         """
         if self.ngspmlset:
             raise RuntimeError('Do not use with ngsolve pml.')
 
         ll = sqrt(a**2 + b**2)
-        T = 1/ll * CF((-a * sin(ng.z / ll),   # tangent of helical centerline
-                       a * cos(ng.z / ll),
-                       b))
-        N = -CF((cos(ng.z / ll),  # normal of helical fiber centerline
-                 sin(ng.z / ll),
-                 0))
+        T = 1 / ll * CF((
+            -a * sin(ng.z / ll),  # tangent of helical centerline
+            a * cos(ng.z / ll),
+            b))
+        N = -CF((
+            cos(ng.z / ll),  # normal of helical fiber centerline
+            sin(ng.z / ll),
+            0))
         B = ng.Cross(T, N)  # binormal vector of fiber centerline
 
-        gamma = CF((a * cos(ng.z / ll),   # parameterization of helix curve
-                    a * sin(ng.z / ll),
-                    b*ng.z/ll))
+        gamma = CF((
+            a * cos(ng.z / ll),  # parameterization of helix curve
+            a * sin(ng.z / ll),
+            b * ng.z / ll))
 
         Phi = gamma + ng.x * N + ng.y * B  # parameterization of helix pipe
 
         # Jacobian of untwisting map
         F = CF((N, B, Phi.Diff(ng.z)), dims=(3, 3)).trans
-        C_inv = ng.Inv(F.trans*F)
-        d = C_inv*CF((0, 0, 1))
+        C_inv = ng.Inv(F.trans * F)
+        d = C_inv * CF((0, 0, 1))
         J = ng.Det(F)
 
         X = ng.H1(self.mesh, order=p, dirichlet='OuterCircle', complex=True)
@@ -2313,7 +2095,7 @@ class ModeSolver:
             B += J * 1j * (u * d[:2] * grad(v) -
                            v * d[:2] * grad(u)) * dx(bonus_intorder=5)
             B.Assemble()
-            C = ng.BilinearForm(1/J * u * v * dx(bonus_intorder=5))
+            C = ng.BilinearForm(1 / J * u * v * dx(bonus_intorder=5))
             C.Assemble()
 
         return A, B, C, X
