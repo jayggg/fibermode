@@ -1,7 +1,6 @@
 from fibermode import StepIndex, BPM
 from ngsolve import InnerProduct
 
-
 nsteps = 10
 
 
@@ -12,8 +11,10 @@ def test_bpm_guided_propagation():
 
     p = 2
     fb = StepIndex(fibername="Nufern_Yb", curveorder=p)
-    betas, zsqrs, Y = fb.guidedmodes(
-        p=p, stop_tol=1e-14, niterations=200, verbose=False)
+    betas, zsqrs, Y = fb.guidedmodes(p=p,
+                                     stop_tol=1e-14,
+                                     niterations=200,
+                                     verbose=False)
     diff = []
 
     bpm = BPM(fb)
@@ -30,7 +31,7 @@ def test_bpm_guided_propagation():
     assert max(diff) < 1e-15, \
         "BPM propagation deviates too much from initial mode."
     print("Test passed: BPM propagation preserves guided modes.\n")
-    print("#"*70)
+    print("#" * 70)
 
 
 def test_bpm_leaky_propagation():
@@ -55,8 +56,13 @@ def test_bpm_leaky_propagation():
     bpm = BPM(fb)
 
     for i in range(len(betas)):
-        bpm.setupCrankNicolson(1e-5, p, kt=betas[i],
-                               pml={'type': 'auto', 'alpha': 5})
+        bpm.setupCrankNicolson(1e-5,
+                               p,
+                               kt=betas[i],
+                               pml={
+                                   'type': 'auto',
+                                   'alpha': 5
+                               })
         u_initial = Y[i]
         u = bpm.propagateCrankNicolson(u_initial, nsteps)
         u.vec.data -= u_initial.vec
@@ -67,8 +73,10 @@ def test_bpm_leaky_propagation():
     assert max(diff) < 1e-14, \
         "BPM propagation deviates too much from initial mode."
     print("Test passed: BPM propagation preserves leaky modes.\n")
-    print("#"*70)
+    print("#" * 70)
 
 
-test_bpm_guided_propagation()
-test_bpm_leaky_propagation()
+if __name__ == '__main__':
+
+    test_bpm_guided_propagation()
+    test_bpm_leaky_propagation()
