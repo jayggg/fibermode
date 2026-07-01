@@ -313,7 +313,7 @@ class ModeSolver:
                            quadrule=quadrule,
                            inverse=inverse,
                            verbose=verbose)
-        Y = NGvecs(X, nspan, M=b.mat)
+        Y = NGvecs(X, nspan, M=b.mat, verbose=verbose)
         Y.setrandom(seed=seed)
         Zsqrs, Y, history, _ = P.feast(Y, hermitian=True, **feastkwargs)
         betas = self.betafrom(Zsqrs)
@@ -370,6 +370,8 @@ class ModeSolver:
         B += -n2 * E * grad(psi) * dx
         D = ng.BilinearForm(Y, condense=True)
         D += n2 * phi * psi * dx
+        Dfull = ng.BilinearForm(Y)  # Plain (uncondensed) copy of D
+        Dfull += n2 * phi * psi * dx
 
         with ng.TaskManager():
             try:
@@ -377,7 +379,12 @@ class ModeSolver:
                 M.Assemble()
                 B.Assemble()
                 C.Assemble()
+                # Note on D.mat and Dfull.mat: For a condense=True form,
+                # NGSolve stores only the interface-dof Schur complement S
+                # (ie [[0,0],[0,S]]) in the local/interface dof split),
+                # not the full matrix.
                 D.Assemble()
+                Dfull.Assemble()
             except Exception:
                 print('*** Trying again with larger heap')
                 ng.SetHeapSize(int(1e9))
@@ -386,6 +393,8 @@ class ModeSolver:
                 B.Assemble()
                 C.Assemble()
                 D.Assemble()
+                Dfull.Assemble()
+
             # Dinv = D.mat.Inverse(Y.FreeDofs(), inverse=inverse)
             Dinv = D.mat.Inverse(Y.FreeDofs(coupling=True), inverse=inverse)
 
@@ -531,6 +540,58 @@ class ModeSolver:
             def rayleigh(selfr, q, workspace=None):
                 return selfr.rayleigh_nsa(q, q, workspace=workspace)
 
+            @staticmethod
+            def block_residuals(E, phi, zsqrs):
+                """
+                Verify that eigenpairs (E, phi, zsqrs) -- as returned by
+                guidedvecmodes or leakyvecmodes for this discretization --
+                produces small residuals for the mixed 2-equation system
+
+                    A E + C phi = Z^2 M E     (X-block)
+                    D phi + B E = 0           (Y-block).
+
+                The Y-block is a direct linear relation (it defines
+                phi = -D^-1 B E), so it is checked column by column.
+                The X-block is an eigenspace relation. Guided/leaky vector
+                modes often occur in (near-)degenerate clusters of the
+                non-normal Schur complement operator A - C D^-1 B. For
+                such clusters FEAST is only guaranteed to return *a* basis
+                of the shared invariant subspace, not a diagonalizing one,
+                we do not check that each individual vector E_i solves
+                A E_i + C phi_i = zsqrs[i] M E_i, instead we find the
+                (generally non-perfectly-diagonal) matrix T solving
+                A E + C phi ~= M E T by the Galerkin projection onto
+                span(E) -- whose eigenvalues reproduce zsqrs -- and check
+                that block residual.
+
+                Returns (residuals_Yblock, residuals_Xblock), both real
+                arrays of length len(zsqrs).
+                """
+                m = len(zsqrs)
+
+                tphi = ng.MultiVector(phi._mv[0], m)
+                tphi[:] = B.mat * E._mv + Dfull.mat * phi._mv
+                res_Y = np.diag(abs(InnerProduct(tphi, tphi).NumPy()))**0.5
+
+                AEphi = ng.MultiVector(E._mv[0], m)
+                AEphi[:] = A.mat * E._mv + C.mat * phi._mv
+                MEvec = ng.MultiVector(E._mv[0], m)
+                MEvec[:] = M.mat * E._mv
+
+                T = np.linalg.solve(
+                    InnerProduct(E._mv, MEvec).NumPy(),
+                    InnerProduct(E._mv, AEphi).NumPy())
+
+                res_X = []
+                for j in range(m):
+                    rj = AEphi[j].CreateVector()
+                    rj.data = AEphi[j]
+                    for k in range(m):
+                        rj.data -= T[k, j] * MEvec[k]
+                    res_X.append(np.sqrt(abs(InnerProduct(rj, rj))))
+
+                return res_Y, np.array(res_X)
+
         # resolvent class definition done -------------------------------
 
         return ResolventVectorMode, M.mat, A.mat, B.mat, C.mat, D, Dinv
@@ -555,8 +616,10 @@ class ModeSolver:
 
         R, M, A, B, C, D, Dinv = self.vecmodesystem(p, inverse=inverse)
         X, Y = R.XY.components
-        E = NGvecs(X, nspan, M=M)
+        E = NGvecs(X, nspan, M=M, verbose=verbose)
+        El = E.create()
         E.setrandom(seed=seed)
+        El.setrandom(seed=seed)
 
         print('Using FEAST to search for vector guided modes in')
         print(f'circle of radius {rad} centered at {ctr}')
@@ -572,10 +635,13 @@ class ModeSolver:
             rhoinv=rhoinv,
             quadrule=quadrule,
             verbose=verbose)
-        Zsqrs, E, history, _ = P.feast(E, **feastkwargs)
+        Zsqrs, E, history, El = P.feast(E,
+                                        Yl=El,
+                                        hermitian=False,
+                                        **feastkwargs)
         betas = self.betafrom(Zsqrs)
 
-        phi = NGvecs(Y, E.m)
+        phi = NGvecs(Y, E.m, verbose=verbose)
         BE = phi.zeroclone()
         BE._mv[:] = -B * E._mv
 
@@ -630,7 +696,7 @@ class ModeSolver:
                                quadrule="circ_trapez_shift",
                                verbose=verbose,
                                checks=False)
-        Y = NGvecs(X**2, nspan)
+        Y = NGvecs(X**2, nspan, verbose=verbose)
         Yl = Y.create()
         Y.setrandom(seed=seed)
         Yl.setrandom(seed=seed)
@@ -808,7 +874,7 @@ class ModeSolver:
         print('Set freq-dependent PML with p=', p, ' alpha=', alpha,
               'and thickness=%.3f' % (self.Rout - self.R))
 
-        Y = NGvecs(X3, nspan)
+        Y = NGvecs(X3, nspan, verbose=verbose)
         Yl = Y.create()
         Y.setrandom(seed=seed)
         Yl.setrandom(seed=seed)
@@ -1065,7 +1131,7 @@ class ModeSolver:
                            quadrule=quadrule,
                            inverse=inverse)
 
-        Y = NGvecs(X, nspan)
+        Y = NGvecs(X, nspan, verbose=verbose)
         Yl = Y.create()
         Y.setrandom(seed=seed)
         Yl.setrandom(seed=seed)
@@ -1104,7 +1170,7 @@ class ModeSolver:
                                                     alpha=alpha,
                                                     inverse=inverse)
         X, Y = R.XY.components
-        E = NGvecs(X, nspan, M=M)
+        E = NGvecs(X, nspan, M=M, verbose=verbose)
         El = E.create()
         E.setrandom(seed=seed)
         El.setrandom(seed=seed)
@@ -1128,7 +1194,7 @@ class ModeSolver:
                                         Yl=El,
                                         hermitian=False,
                                         **feastkwargs)
-        phi = NGvecs(Y, E.m)
+        phi = NGvecs(Y, E.m, verbose=verbose)
         BE = phi.zeroclone()
         BE._mv[:] = -B * E._mv
 
@@ -1820,8 +1886,8 @@ class ModeSolver:
                            verbose=verbose,
                            inverse=inverse)
 
-        Y = NGvecs(X, nspan)
-        Yl = NGvecs(X, nspan)
+        Y = NGvecs(X, nspan, verbose=verbose)
+        Yl = NGvecs(X, nspan, verbose=verbose)
         Y.setrandom(seed=seed)
         Yl.setrandom(seed=seed)
         zsqr, Y, history, Yl = P.feast(Y,
@@ -2609,8 +2675,8 @@ class ModeSolver:
                                            autoupdate=True,
                                            pmlbegin=pmlbegin,
                                            pmlend=pmlend)
-            Yr = NGvecs(X, nspan)
-            Yl = NGvecs(X, nspan)
+            Yr = NGvecs(X, nspan, verbose=verbose)
+            Yl = NGvecs(X, nspan, verbose=verbose)
             Yr.setrandom(seed=seed)
             Yl.setrandom(seed=seed)
 
@@ -2766,8 +2832,8 @@ class ModeSolver:
                                            autoupdate=True,
                                            pmlbegin=pmlbegin,
                                            pmlend=pmlend)
-            Yr = NGvecs(X, nspan)
-            Yl = NGvecs(X, nspan)
+            Yr = NGvecs(X, nspan, verbose=verbose)
+            Yl = NGvecs(X, nspan, verbose=verbose)
             Yr.setrandom(seed=seed)
             Yl.setrandom(seed=seed)
 
