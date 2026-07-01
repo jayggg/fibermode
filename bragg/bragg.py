@@ -12,7 +12,6 @@ import netgen.geom2d as geom2d
 import ngsolve as ng
 
 from warnings import warn
-from pyeigfeast.spectralproj.ngs import NGvecs
 from fibermode.solvers.modesolver import ModeSolver
 
 
@@ -32,14 +31,21 @@ class Bragg(ModeSolver):
     bcs     : boundary condition names; last entry must be ``'OuterCircle'``
     wl      : free-space wavelength (meters)
     ref     : number of uniform mesh refinements
-    curve   : geometry curve order for NGSolve
+    curveorder : geometry curve order; should equal the FE polynomial degree p
     beta_sq_plane : if True, search in the β² plane instead of Z²
     """
 
-    def __init__(self, scale=5e-5, ts=(5e-5, 1e-5, 2e-5, 2e-5),
-                 mats=('air', 'glass', 'air', 'Outer'), ns=(1, 1.44, 1, 1),
-                 maxhs=(.2, .025, .08, .1), bcs=None, wl=1.2e-6,
-                 ref=0, curve=8, beta_sq_plane=False):
+    def __init__(self,
+                 scale=5e-5,
+                 ts=(5e-5, 1e-5, 2e-5, 2e-5),
+                 mats=('air', 'glass', 'air', 'Outer'),
+                 ns=(1, 1.44, 1, 1),
+                 maxhs=(.2, .025, .08, .1),
+                 bcs=None,
+                 wl=1.2e-6,
+                 ref=0,
+                 curveorder=8,
+                 beta_sq_plane=False):
 
         self.check_parameters(ts, ns, mats, maxhs, bcs)
 
@@ -63,18 +69,24 @@ class Bragg(ModeSolver):
         self.wavelength = wl
         self.ns = list(ns)
 
+        self.ref = ref
         self.create_geometry()
-        self.create_mesh(ref=ref, curve=curve)
-        self.curveorder = curve
+        self.create_mesh(ref=ref)
+        self._curveorder = curveorder
+        self.mesh.Curve(curveorder)
+
         self.set_material_properties(beta_sq_plane)
 
         super(Bragg, self).__init__(self.mesh, self.L, self.n0)
 
     @classmethod
     def from_dict(cls, d):
-        """Construct a Bragg instance from a parameter dictionary."""
-        keys = ['scale', 'ts', 'mats', 'ns', 'maxhs', 'bcs', 'wl',
-                'ref', 'curve', 'beta_sq_plane']
+        """Construct a Bragg instance from a parameter dictionary.
+        """
+        keys = [
+            'scale', 'ts', 'mats', 'ns', 'maxhs', 'bcs', 'wl', 'ref',
+            'curveorder', 'beta_sq_plane'
+        ]
         return cls(**{k: d[k] for k in keys if k in d})
 
     def check_parameters(self, ts, ns, mats, maxhs, bcs):
@@ -98,66 +110,63 @@ class Bragg(ModeSolver):
             raise ValueError('Final material (PML region) must ' +
                              'be named "Outer".')
 
-    def create_mesh(self, ref=0, curve=8):
-        """Generate and curve the NGSolve mesh."""
+    @property
+    def curveorder(self):
+        """Geometry curve order.
+
+        Setting this attribute re-curves the mesh immediately, so you can
+        match it to the FE polynomial degree p before calling a solver::
+
+            C.curveorder = p
+            C.leakymode(p, ...)
+        """
+        return self._curveorder
+
+    @curveorder.setter
+    def curveorder(self, order):
+        print('Recreating mesh and curving')
+        self.create_geometry()
+        self.create_mesh(ref=self.ref)
+        self._curveorder = order
+        self.mesh.Curve(order)
+
+    def create_mesh(self, ref=0):
         self.mesh = ng.Mesh(self.geo.GenerateMesh())
         for _ in range(ref):
             self.mesh.ngmesh.Refine()
         self.mesh.ngmesh.SetGeometry(self.geo)
         self.mesh = ng.Mesh(self.mesh.ngmesh.Copy())
-        self.mesh.Curve(curve)
 
     def create_geometry(self):
-        """Build the non-dimensionalized concentric-circle geometry."""
+        """Build the non-dimensionalized concentric-circle geometry.
+        """
         self.geo = geom2d.SplineGeometry()
         for i, R in enumerate(self.Rs[:-1]):
-            self.geo.AddCircle(c=(0, 0), r=R, leftdomain=i + 1,
-                               rightdomain=i + 2, bc=self.bcs[i])
-        self.geo.AddCircle(c=(0, 0), r=self.Rs[-1],
-                           leftdomain=len(self.Rs), bc=self.bcs[-1])
+            self.geo.AddCircle(c=(0, 0),
+                               r=R,
+                               leftdomain=i + 1,
+                               rightdomain=i + 2,
+                               bc=self.bcs[i])
+        self.geo.AddCircle(c=(0, 0),
+                           r=self.Rs[-1],
+                           leftdomain=len(self.Rs),
+                           bc=self.bcs[-1])
         for i, (mat, maxh) in enumerate(zip(self.mats, self.maxhs)):
             self.geo.SetMaterial(i + 1, mat)
             self.geo.SetDomainMaxH(i + 1, maxh)
 
     def set_material_properties(self, beta_sq_plane=False):
-        """Set k0, refractive indices, and the index-well coefficient."""
+        """Set k0, refractive indices, and the index-well coefficient.
+        """
         if beta_sq_plane:
             warn('Using square-beta plane: search centers should be at '
                  '-(beta*L)^2 where L is the scale attribute.')
         self.k = 2 * np.pi / self.wavelength
         self.refractive_indices = [
-            n(self.wavelength) if callable(n) else n for n in self.ns]
+            n(self.wavelength) if callable(n) else n for n in self.ns
+        ]
         self.index = ng.CF(self.refractive_indices)
         self.n0 = self.refractive_indices[-1]
-        n0sq = ng.CF([self.n0 ** 2] * len(self.ns))
-        self.V = (self.L * self.k) ** 2 * (
-            n0sq * (not beta_sq_plane) - self.index ** 2)
-
-    def E_modes_from_array(self, array, p=1, mesh=None):
-        """Wrap a numpy array as an NGvecs object in the HCurl space."""
-        if mesh is None:
-            mesh = self.mesh
-        X = ng.HCurl(mesh, order=p + 1 - max(1 - p, 0), type1=True,
-                     dirichlet='OuterCircle', complex=True)
-        E = NGvecs(X, array.shape[1])
-        try:
-            E.fromnumpy(array)
-        except ValueError:
-            raise ValueError(
-                'Array shape mismatch: check that the mesh and polynomial '
-                'degree match those used when the array was created.')
-        return E
-
-    def phi_modes_from_array(self, array, p=1, mesh=None):
-        """Wrap a numpy array as an NGvecs object in the H1 space."""
-        if mesh is None:
-            mesh = self.mesh
-        Y = ng.H1(mesh, order=p + 1, dirichlet='OuterCircle', complex=True)
-        phi = NGvecs(Y, array.shape[1])
-        try:
-            phi.fromnumpy(array)
-        except ValueError:
-            raise ValueError(
-                'Array shape mismatch: check that the mesh and polynomial '
-                'degree match those used when the array was created.')
-        return phi
+        n0sq = ng.CF([self.n0**2] * len(self.ns))
+        self.V = (self.L * self.k)**2 * (n0sq *
+                                         (not beta_sq_plane) - self.index**2)
