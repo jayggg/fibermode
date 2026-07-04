@@ -7,13 +7,15 @@ import matplotlib.pyplot as plt
 from scipy.optimize import newton
 from fibermode.bragg import BraggExactScalar
 
-A = BraggExactScalar(scale=1e-6,
-                     ts=[5e-5, 1e-5, 2e-5],
-                     ns=[1, 1.44, 1],
-                     mats=['air', 'glass', 'air'],
-                     wl=1.2e-6)
+A = BraggExactScalar(
+    ts=[5e-5, 1e-5, 2e-5],
+    ns=[1, 1.44, 1],
+    mats=['air', 'glass', 'air'],
+    wl=1.2e-6,
+    scale=1e-6,
+)
 
-# Complex root finding:
+# Complex root finding
 
 nu = 0  # scalar fundamental mode is azimuthally symmetric
 outer = 'h1'  # outgoing Hankel; gives Im(beta) > 0 for leaky modes
@@ -30,8 +32,14 @@ Z2 = A.sqrZfrom(beta_phys)  # The  Z^2 nondimensional eigenvalue
 print(f'beta (physical)  = {beta_phys}')
 print(f'Z^2              = {Z2}')
 print(f'Confinement loss = {20 * beta_phys.imag / np.log(10):.4f} dB/m')
+# Archived print outputs:
+#    Scaled beta = (5.2357654056629634+2.6356530509847056e-08j)
+#    Residual    = 1.71e-12
+#    beta (physical)  = (5235765.405662963+0.026356530509847056j)
+#    Z^2              = (0.0023283976667194395-2.759932213135152e-07j)
+#    Confinement loss = 0.2289 dB/m
 
-# Assemble and plot the field:
+# Assemble and plot the field
 
 F = A.fields_matplot(beta1, nu, outer)
 A.plot2D_contour(F['Ez'], figsize=(10, 7))

@@ -1,6 +1,6 @@
 """Demo: Bragg fiber leaky scalar mode via polynomial PML FEAST.
 
-A case where a core-localized leaky mode is found.
+A core-localized leaky mode is found.
 """
 
 from fibermode.bragg import Bragg
@@ -21,7 +21,7 @@ B = Bragg(
 Z, y, yl, beta, P, info = B.leakymode(
     p,
     ctr=0.06,
-    rad=0.01,
+    rad=0.0001,
     alpha=5,
     nspan=4,
     npts=4,
@@ -38,5 +38,5 @@ relbetaerr = abs(beta[0] - exact_beta) / abs(exact_beta)
 print(f'\nNumerical Z  = {Z[0]}')
 print(f'Exact Z      = {exact_z}')
 print(f'|error|  in nondim  Z = {abs(Z[0] - exact_z):.3e}')
-print(f'Relative |error| in β = {relbetaerr:.3e}  (rad/m)')
+print(f'Relative |error| in β = {relbetaerr:.3e}')
 print(f'Converged    = {info["converged"]}')
