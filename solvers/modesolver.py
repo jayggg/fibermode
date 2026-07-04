@@ -2819,11 +2819,6 @@ class ModeSolver:
 
         ndofs = [0]
         Zsqrs = []
-        if visualize:
-            eevis = ng.GridFunction(ng.L2(self.mesh, order=0, autoupdate=True),
-                                    name='estimator',
-                                    autoupdate=True)
-            ng.Draw(eevis)
 
         while ndofs[-1] < maxndofs:  # ADAPTIVITY LOOP ------------------
 
@@ -2884,6 +2879,8 @@ class ModeSolver:
             ee = self.eestimator_helmholtz(Yr, Yl, avr_zsqr, self.pml_A,
                                            self.pml_B, self.V)
             if visualize:
+                eevis = ng.GridFunction(ng.L2(self.mesh, order=0),
+                                        name='estimator')
                 eevis.vec.FV().NumPy()[:] = ee
                 ng.Draw(eevis)
                 Yl.draw(name='LftEig')
