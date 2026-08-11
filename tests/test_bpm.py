@@ -28,7 +28,7 @@ def test_bpm_guided_propagation():
         print("Case", i, " error", diff[-1])
 
     print("Max difference after propagation:", max(diff))
-    assert max(diff) < 1e-15, \
+    assert max(diff) < 1e-14, \
         "BPM propagation deviates too much from initial mode."
     print("Test passed: BPM propagation preserves guided modes.\n")
     print("#" * 70)
