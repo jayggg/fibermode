@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Computing Optical Fiber Modes &#8212; Computing Optical Fiber Modes</title>
+    <title>Capabilities &#8212; Computing Optical Fiber Modes</title>
   
   
   
@@ -178,7 +178,7 @@
         <ul class="nav bd-sidenav bd-sidenav__home-link">
             <li class="toctree-l1 current active">
                 <a class="reference internal" href="#">
-                    Computing Optical Fiber Modes
+                    Capabilities
                 </a>
             </li>
         </ul>
@@ -194,6 +194,10 @@
 <li class="toctree-l2"><a class="reference internal" href="2_1_bragg_exact.html">2.1. Semi-analytical methods for Bragg fiber modes</a></li>
 <li class="toctree-l2"><a class="reference internal" href="2_2_bragg.html">2.2. Numerical computation of Bragg fiber leaky modes</a></li>
 <li class="toctree-l2"><a class="reference internal" href="2_3_bragg_adaptivity.html">2.3. Adaptive computation of vector leaky modes in a Bragg fiber</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="3_arf.html">3. Antiresonant Fibers</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="3_1_arf.html">3.1. Modes of antiresonant fibers</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="genindex.html">Index</a></li>
@@ -350,7 +354,7 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>Computing Optical Fiber Modes</h1>
+    <h1>Capabilities</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -360,13 +364,14 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#capabilities">Capabilities</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installation">Installation</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#quick-start">Quick start</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#documentation-tutorial-notebooks">Documentation &amp; tutorial notebooks</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cite">Cite</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#license">License</a></li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#">Capabilities</a></li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#installation">Installation</a></li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#quick-start">Quick start</a></li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#documentation-tutorial-notebooks">Documentation &amp; Tutorial Notebooks</a></li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#cite">Cite</a></li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#license">License</a></li>
 </ul>
+
             </nav>
         </div>
     </div>
@@ -377,19 +382,26 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="computing-optical-fiber-modes">
-<h1>Computing Optical Fiber Modes<a class="headerlink" href="#computing-optical-fiber-modes" title="Link to this heading">#</a></h1>
-<p><strong>Using the <code class="docutils literal notranslate"><span class="pre">fibermode</span></code> package</strong></p>
-<p>The Python package <code class="docutils literal notranslate"><span class="pre">fibermode</span></code> contains facilities for
-computing guided and leaky modes of optical fibers.<br />
-They provide both semi-analytical closed-form solutions and numerical
-solutions based on finite element discretizations of the scalar
-Helmholtz and vector Maxwell curl-curl eigenproblems.  The numerical
-facilities are based on finite elements and are built atop
-<a class="reference external" href="https://ngsolve.org">NGSolve</a>. The eigensolver is the FEAST contour
-integral eigensolver.</p>
+  <table>
+<tr>
+<td valign="top" width="65%" style="border: none">
+<h1>Computing Optical Fiber Modes Using <code>fibermode</code></h1>
+<br>
+This code repository contains `fibermode`, a Python package for
+computing guided and leaky modes of optical fibers. It provides both
+semi-analytical closed-form solutions and numerical solutions based on
+finite element discretizations of the scalar Helmholtz and vector
+Maxwell curl-curl eigenproblems. The numerical facilities are based on
+finite elements and are built atop NGSolve (https://ngsolve.org). The
+eigensolver is the FEAST contour integral eigensolver.
+</td>
+<td valign="middle" align="center" width="35%" style="border: none">
+<img src="docs/figs/NGfiber.png" width="240"/>
+</td>
+</tr>
+</table>
 <section id="capabilities">
-<h2>Capabilities<a class="headerlink" href="#capabilities" title="Link to this heading">#</a></h2>
+<h1>Capabilities<a class="headerlink" href="#capabilities" title="Link to this heading">#</a></h1>
 <p><strong>Semi-analytical methods</strong></p>
 <ul class="simple">
 <li><p>LP modes of step-index fibers via characteristic equations and Bessel
@@ -411,23 +423,39 @@ method — <code class="docutils literal notranslate"><span class="pre">BraggExa
 <p>Key algorithmic features include the  FEAST polynomial eigensolver with contour integration in the complex plane,  a frequency-dependent PML for accurate leaky mode eigenvalues, nondimensional <em>Z</em>-plane formulation to avoid numerical round-off in large  eigenvalue problems, confinement loss (dB/m) computed directly from complex propagation constants, and mode visualization tools.</p>
 </section>
 <section id="installation">
-<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading">#</a></h2>
+<h1>Installation<a class="headerlink" href="#installation" title="Link to this heading">#</a></h1>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">git</span><span class="nd">@github</span><span class="o">.</span><span class="n">com</span><span class="p">:</span><span class="n">jayggg</span><span class="o">/</span><span class="n">fibermode</span><span class="o">.</span><span class="n">git</span>
+<span class="n">cd</span> <span class="n">fibermode</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">e</span> <span class="o">.</span>
 </pre></div>
 </div>
-<p>Add the directory containing <code class="docutils literal notranslate"><span class="pre">fibermode/</span></code> to your <code class="docutils literal notranslate"><span class="pre">PYTHONPATH</span></code>.</p>
-<p>Install the dependencies in doc/requirements.txt. The two primary dependencies are <a class="reference external" href="https://ngsolve.org">NGSolve</a>, a
-high-performance finite element library, and
-<a class="reference external" href="https://bitbucket.org/jayggg/pyeigfeast/src/master/">pyeigfeast</a>,
-which implements the
-FEAST polynomial eigensolver for NGSolve. Additional dependencies are
-<a class="reference external" href="https://numpy.org">numpy</a>, <a class="reference external" href="https://scipy.org">scipy</a> (Bessel functions and
-root finding), <a class="reference external" href="https://matplotlib.org">matplotlib</a>, and
-<a class="reference external" href="https://github.com/RParini/cxroots">cxroots</a> (complex-plane root finding for
-leaky modes).</p>
+<p><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">-e</span> <span class="pre">.</span></code> installs <code class="docutils literal notranslate"><span class="pre">fibermode</span></code> in editable mode and pulls in
+its PyPI dependencies (<code class="docutils literal notranslate"><span class="pre">numpy</span></code>, <code class="docutils literal notranslate"><span class="pre">scipy</span></code>, <code class="docutils literal notranslate"><span class="pre">matplotlib</span></code>, <code class="docutils literal notranslate"><span class="pre">sympy</span></code>,
+<code class="docutils literal notranslate"><span class="pre">cxroots</span></code>) automatically. Two dependencies are deliberately left out
+of <code class="docutils literal notranslate"><span class="pre">install_requires</span></code> and must be managed yourself:</p>
+<ul>
+<li><p><a class="reference external" href="https://ngsolve.org">NGSolve</a>, a high-performance finite element
+library. Most users already have NGSolve installed (conda, a source
+build, or an MPI/MKL-enabled build) — <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">ngsolve</span></code> would
+fetch an unrelated plain-PyPI copy that can shadow or conflict with
+it, so it’s intentionally not listed. If you don’t have NGSolve yet,
+<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">ngsolve</span></code> is fine.</p></li>
+<li><p><a class="reference external" href="https://bitbucket.org/jayggg/pyeigfeast/src/master/">pyeigfeast</a>,
+which implements the FEAST polynomial eigensolver for NGSolve. It
+has no PyPI release and no <code class="docutils literal notranslate"><span class="pre">setup.py</span></code>, so <code class="docutils literal notranslate"><span class="pre">pip</span></code> cannot install it
+regardless — clone it and add it to your <code class="docutils literal notranslate"><span class="pre">PYTHONPATH</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">git</span><span class="nd">@bitbucket</span><span class="o">.</span><span class="n">org</span><span class="p">:</span><span class="n">jayggg</span><span class="o">/</span><span class="n">pyeigfeast</span><span class="o">.</span><span class="n">git</span>
+<span class="n">export</span> <span class="n">PYTHONPATH</span><span class="o">=</span><span class="s2">&quot;$PWD/pyeigfeast:$PYTHONPATH&quot;</span>
+</pre></div>
+</div>
+</li>
+</ul>
+<p>(If you don’t want an editable install, <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">.</span></code> works too, but
+since this is an actively developed research codebase, <code class="docutils literal notranslate"><span class="pre">-e</span></code> is
+recommended so local edits take effect without reinstalling.)</p>
 </section>
 <section id="quick-start">
-<h2>Quick start<a class="headerlink" href="#quick-start" title="Link to this heading">#</a></h2>
+<h1>Quick start<a class="headerlink" href="#quick-start" title="Link to this heading">#</a></h1>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">fibermode</span><span class="w"> </span><span class="kn">import</span> <span class="n">StepIndexExact</span><span class="p">,</span> <span class="n">StepIndex</span><span class="p">,</span> <span class="n">Bragg</span><span class="p">,</span> <span class="n">BraggExactScalar</span>
 
 <span class="c1"># Semi-analytical LP modes of a named fiber</span>
@@ -442,11 +470,11 @@ leaky modes).</p>
 <p>Further simple demos are available at the <code class="docutils literal notranslate"><span class="pre">demos</span></code> folder.</p>
 </section>
 <section id="documentation-tutorial-notebooks">
-<h2>Documentation &amp; tutorial notebooks<a class="headerlink" href="#documentation-tutorial-notebooks" title="Link to this heading">#</a></h2>
-<p>See <code class="docutils literal notranslate"><span class="pre">docs</span></code> folder.</p>
+<h1>Documentation &amp; Tutorial Notebooks<a class="headerlink" href="#documentation-tutorial-notebooks" title="Link to this heading">#</a></h1>
+<p>Browse <a class="reference external" href="https://jayggg.github.io/fibermode/README.html">tutorial notebooks online</a>. The notebooks can also be found in the <code class="docutils literal notranslate"><span class="pre">docs</span></code> folder. Additionally, the <code class="docutils literal notranslate"><span class="pre">demos</span></code> folder contain simple python scripts.</p>
 </section>
 <section id="cite">
-<h2>Cite<a class="headerlink" href="#cite" title="Link to this heading">#</a></h2>
+<h1>Cite<a class="headerlink" href="#cite" title="Link to this heading">#</a></h1>
 <p>If you use <code class="docutils literal notranslate"><span class="pre">fibermode</span></code> in your research or teaching, please cite it:</p>
 <div class="highlight-bibtex notranslate"><div class="highlight"><pre><span></span><span class="nc">@misc</span><span class="p">{</span><span class="nl">fibermode</span><span class="p">,</span>
 <span class="w">  </span><span class="na">author</span><span class="w">       </span><span class="p">=</span><span class="w"> </span><span class="s">{Gopalakrishnan, Jay}</span><span class="p">,</span>
@@ -458,13 +486,12 @@ leaky modes).</p>
 </div>
 </section>
 <section id="license">
-<h2>License<a class="headerlink" href="#license" title="Link to this heading">#</a></h2>
+<h1>License<a class="headerlink" href="#license" title="Link to this heading">#</a></h1>
 <p>Write to  <a class="reference external" href="https://web.pdx.edu/~gjay/">Jay Gopalakrishnan</a>
 for consultations, bug reports and suggestions. Pull requests  are welcome at
 <a class="github reference external" href="https://github.com/jayggg/fibermode">jayggg/fibermode</a>.
 Code and documentation
 are released under the <a class="reference download internal" download="" href="_downloads/9879d6db96fd29134fc802214163b95a/LICENSE"><span class="xref download myst">MIT License</span></a>.</p>
-</section>
 <div class="toctree-wrapper compound">
 </div>
 </section>
@@ -524,13 +551,14 @@ are released under the <a class="reference download internal" download="" href="
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#capabilities">Capabilities</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installation">Installation</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#quick-start">Quick start</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#documentation-tutorial-notebooks">Documentation &amp; tutorial notebooks</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cite">Cite</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#license">License</a></li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#">Capabilities</a></li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#installation">Installation</a></li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#quick-start">Quick start</a></li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#documentation-tutorial-notebooks">Documentation &amp; Tutorial Notebooks</a></li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#cite">Cite</a></li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#license">License</a></li>
 </ul>
+
   </nav></div>
 
 </div></div>

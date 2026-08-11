@@ -1,18 +1,23 @@
+<table>
+<tr>
+<td valign="top" width="65%" style="border: none">
+<h1>Computing Optical Fiber Modes Using <code>fibermode</code></h1>
 
-# Computing Optical Fiber Modes
+<br>
+This code repository contains `fibermode`, a Python package for
+computing guided and leaky modes of optical fibers. It provides both
+semi-analytical closed-form solutions and numerical solutions based on
+finite element discretizations of the scalar Helmholtz and vector
+Maxwell curl-curl eigenproblems. The numerical facilities are based on
+finite elements and are built atop NGSolve (https://ngsolve.org). The
+eigensolver is the FEAST contour integral eigensolver.
 
-**Using the `fibermode` package**
-
-
-The Python package `fibermode` contains facilities for 
-computing guided and leaky modes of optical fibers.  
-They provide both semi-analytical closed-form solutions and numerical
-solutions based on finite element discretizations of the scalar
-Helmholtz and vector Maxwell curl-curl eigenproblems.  The numerical
-facilities are based on finite elements and are built atop
-[NGSolve](https://ngsolve.org). The eigensolver is the FEAST contour
-integral eigensolver.
-
+</td>
+<td valign="middle" align="center" width="35%" style="border: none">
+<img src="docs/figs/NGfiber.png" width="240"/>
+</td>
+</tr>
+</table>
 
 ## Capabilities
 
@@ -38,19 +43,34 @@ Key algorithmic features include the  FEAST polynomial eigensolver with contour 
 
 ```
 git clone git@github.com:jayggg/fibermode.git
+cd fibermode
+pip install -e .
 ```
 
-Add the directory containing `fibermode/` to your `PYTHONPATH`.
+`pip install -e .` installs `fibermode` in editable mode and pulls in
+its PyPI dependencies (`numpy`, `scipy`, `matplotlib`, `sympy`,
+`cxroots`) automatically. Two dependencies are deliberately left out
+of `install_requires` and must be managed yourself:
 
-Install the dependencies in doc/requirements.txt. The two primary dependencies are [NGSolve](https://ngsolve.org), a
-high-performance finite element library, and
-[pyeigfeast](https://bitbucket.org/jayggg/pyeigfeast/src/master/),
-which implements the
-FEAST polynomial eigensolver for NGSolve. Additional dependencies are
-[numpy](https://numpy.org), [scipy](https://scipy.org) (Bessel functions and
-root finding), [matplotlib](https://matplotlib.org), and
-[cxroots](https://github.com/RParini/cxroots) (complex-plane root finding for
-leaky modes).
+- [NGSolve](https://ngsolve.org), a high-performance finite element
+  library. Most users already have NGSolve installed (conda, a source
+  build, or an MPI/MKL-enabled build) — `pip install ngsolve` would
+  fetch an unrelated plain-PyPI copy that can shadow or conflict with
+  it, so it's intentionally not listed. If you don't have NGSolve yet,
+  `pip install ngsolve` is fine.
+- [pyeigfeast](https://bitbucket.org/jayggg/pyeigfeast/src/master/),
+  which implements the FEAST polynomial eigensolver for NGSolve. It
+  has no PyPI release and no `setup.py`, so `pip` cannot install it
+  regardless — clone it and add it to your `PYTHONPATH`:
+
+  ```
+  git clone git@bitbucket.org:jayggg/pyeigfeast.git
+  export PYTHONPATH="$PWD/pyeigfeast:$PYTHONPATH"
+  ```
+
+(If you don't want an editable install, `pip install .` works too, but
+since this is an actively developed research codebase, `-e` is
+recommended so local edits take effect without reinstalling.)
 
 ## Quick start
 
@@ -69,9 +89,9 @@ betas, zsqrs, modes = fiber.guidedmodes(p=3)
 Further simple demos are available at the `demos` folder.
 
 
-## Documentation & tutorial notebooks
+## Documentation & Tutorial Notebooks
 
-See `docs` folder.
+Browse [tutorial notebooks online](https://jayggg.github.io/fibermode/README.html). The notebooks can also be found in the `docs` folder. Additionally, the `demos` folder contain simple python scripts. 
 
 
 ## Cite
@@ -94,4 +114,3 @@ for consultations, bug reports and suggestions. Pull requests  are welcome at
 <https://github.com/jayggg/fibermode>.
 Code and documentation 
 are released under the [MIT License](LICENSE).
-
