@@ -2,38 +2,35 @@
 Computing some modes of a 6-tube ARF structure in Poletti's paper
 """
 
-from fiberamp.fiber.microstruct import ARF
+from fibermode import ARF
 
 outermaterials = 'air'
 freecapil = False
 a = ARF(name='poletti', outermaterials=outermaterials, freecapil=freecapil)
-
-# Refine mesh if needed:
-# a.refine()
+# a.refine()  # Refine mesh if needed
 
 # Solver parameters.
 
-p = 2       # finite element degree
+p = 2  # finite element degree
 ctr = 2.24  # FEAST contour center
 rad = 0.02  # FEAST contour radius
 nspan = 10  # number of vectors in initial span
-alpha = 5   # PML decay strength
+alpha = 5  # PML decay strength
 
 solverparams = dict(p=p, ctr=ctr, rad=rad, nspan=nspan, alpha=alpha)
 
 # Solve for leaky mode using freq-dependent PML & polynomial eig
-print('POLY PML' + '-'*60)
+print('POLY PML' + '-' * 60)
 z, y, yl, beta, P, _ = a.leakymode(**solverparams)
 y.draw()
 
 # Try other solvers, like the standard PML & linear eig:
-print('SMOOTH PML' + '-'*60)
-z2, yy, yyl, beta2, P2 = \
+print('SMOOTH PML' + '-' * 60)
+z2, yy, yyl, beta2, P2, _ = \
     a.leakymode_smooth(p, centerZ2=ctr**2, radiusZ2=5*rad, alpha=5)
-print('AUTO PML' + '-'*60)
+print('AUTO PML' + '-' * 60)
 z3, y3, yl3, beta3, P3 = \
     a.leakymode_auto(p, centerZ2=ctr**2, radiusZ2=5*rad, alpha=5)
-
 
 #
 # NOTE ------------------------------------------------

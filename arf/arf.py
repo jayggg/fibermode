@@ -733,7 +733,7 @@ class ARF(ModeSolver):
 
         # The rotation matrix needed to generate the spline points for an
         # arbitrary capillary tube.
-        R = np.mat(
+        R = np.array(
             [
                 [np.cos(rotation_angle), -np.sin(rotation_angle)],
                 [np.sin(rotation_angle), np.cos(rotation_angle)]
@@ -776,4 +776,5 @@ class ARF(ModeSolver):
 
     def curve(self, curve=3):
         self.mesh.Curve(curve)
+        self.curveorder = curve
 
