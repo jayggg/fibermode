@@ -1,0 +1,1098 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>2.1. Semi-analytical methods for Bragg fiber modes &#8212; Computing Optical Fiber Modes</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="_static/togglebutton.css?v=13237357" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="_static/togglebutton.js?v=4a39c7ea"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '2_1_bragg_exact';</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="2.2. Numerical computation of Bragg fiber leaky modes" href="2_2_bragg.html" />
+    <link rel="prev" title="2. Bragg Fiber" href="2_bragg.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="README.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="_static/NGfiber.png" class="logo__image only-light" alt="Computing Optical Fiber Modes - Home"/>
+    <script>document.write(`<img src="_static/NGfiber.png" class="logo__image only-dark" alt="Computing Optical Fiber Modes - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="README.html">
+                    Computing Optical Fiber Modes
+                </a>
+            </li>
+        </ul>
+        <ul class="current nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="1_stepindex.html">1. Step-Index Fiber</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="1_1_stepindex_exact.html">1.1. Analytic expressions for guided modes of a step-index fiber</a></li>
+<li class="toctree-l2"><a class="reference internal" href="1_2_stepindex.html">1.2. Numerical computation of guided modes of a step-index fiber</a></li>
+<li class="toctree-l2"><a class="reference internal" href="1_3_stepindex_leaky.html">1.3. Leaky modes of a step-index fiber</a></li>
+<li class="toctree-l2"><a class="reference internal" href="1_4_stepindex_vector.html">1.4. Vector guided modes of a step-index fiber</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="2_bragg.html">2. Bragg Fiber</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">2.1. Semi-analytical methods for Bragg fiber modes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="2_2_bragg.html">2.2. Numerical computation of Bragg fiber leaky modes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="2_3_bragg_adaptivity.html">2.3. Adaptive computation of vector leaky modes in a Bragg fiber</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="genindex.html">Index</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+<a href="https://github.com/jayggg/fibermode" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="_sources/2_1_bragg_exact.ipynb" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.ipynb</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Semi-analytical methods for Bragg fiber modes</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-leaky-mode-eigenproblems">The leaky mode eigenproblems</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#matrix-methods-for-semi-analytical-solution">Matrix methods for semi-analytical solution</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#constructing-a-bragg-fiber-instance">Constructing a Bragg fiber instance</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-braggexactscalar-example">A <code class="docutils literal notranslate"><span class="pre">BraggExactScalar</span></code> example</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#geometry-and-initialization">Geometry and initialization</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#finding-the-propagation-constant">Finding the propagation constant</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#visually-locating-the-region-to-search">Visually locating the region to search</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#survey-plot">Survey plot</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#first-zoom-in">First zoom in</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#next-zoom-in">Next zoom in</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#final-zoom-in">Final zoom in</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#providing-initial-guesses-to-solver">Providing initial guesses to solver</a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#converting-to-the-non-dimensional-z-2-eigenvalue">Converting to the non-dimensional <span class="math notranslate nohighlight">\(Z^2\)</span> eigenvalue</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#assembling-fields">Assembling fields</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-corresponding-braggexactvector-example">The corresponding <code class="docutils literal notranslate"><span class="pre">BraggExactVector</span></code> example</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-propagation-constant-for-the-vector-case">The propagation constant for the vector case</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#vector-mode-plots">Vector mode plots</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#further-models">Further models</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#references">References</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="semi-analytical-methods-for-bragg-fiber-modes">
+<h1><span class="section-number">2.1. </span>Semi-analytical methods for Bragg fiber modes<a class="headerlink" href="#semi-analytical-methods-for-bragg-fiber-modes" title="Link to this heading">#</a></h1>
+<p id="index-3"><span id="index-2"></span><span id="index-1"></span><span id="index-0"></span>The <strong>Bragg fiber</strong> is a fiber consisting of concentric rings of dielectric materials.  Similarly to the step-index fiber, we model the refractive index of a Bragg fiber as piecewise constant. What separates the Bragg fiber from the step-index fiber is a refractive index profile that alternates between high and low refractive index outwards from the core in concentric rings.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">fibermode</span></code> repository has three modules for computing modes of Bragg fibers: <code class="docutils literal notranslate"><span class="pre">Bragg</span></code>, <code class="docutils literal notranslate"><span class="pre">BraggExactScalar</span></code>, and <code class="docutils literal notranslate"><span class="pre">BraggExactVector</span></code>. All three modules have facilities for computing modes and propagation constants of a Bragg fiber, but each achieve this through different means:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">BraggExactScalar</span></code> solves for a scalar-valued field solving a Helmholtz eigenproblem (which, while mathematically meaningful, is only physically meaningful for low index contrasts) by semi-analytical means.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">BraggExactVector</span></code> solves for a vector-valued field solving a Maxwell eigenproblem by semi-analytical means.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Bragg</span></code> solves for modes using numerical (finite element) discretizations.</p></li>
+</ul>
+<p>In this document we outline the capabilities and usage of the <code class="docutils literal notranslate"><span class="pre">BraggExactVector</span></code> and <code class="docutils literal notranslate"><span class="pre">BraggExactScalar</span></code> modules, which calculate the underlying eigenpairs semi-analytically, leaving the <code class="docutils literal notranslate"><span class="pre">Bragg</span></code> case to <a class="reference internal" href="2_2_bragg.html"><span class="std std-doc">Notebook 2.2</span></a>. Our mode finding process consists of three steps:</p>
+<ol class="arabic simple">
+<li><p>Construct the Bragg fiber geometry on which we solve,</p></li>
+<li><p>Find the propagation constant <span class="math notranslate nohighlight">\(\beta\)</span>,</p></li>
+<li><p>Use <span class="math notranslate nohighlight">\(\beta\)</span> to construct the mode profile.</p></li>
+</ol>
+<section id="the-leaky-mode-eigenproblems">
+<h2>The leaky mode eigenproblems<a class="headerlink" href="#the-leaky-mode-eigenproblems" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="1_3_stepindex_leaky.html"><span class="std std-doc">Notebook 1.3</span></a> introduced leaky modes for the step-index fiber. The same eigenproblems carry over to the Bragg fiber unchanged. The only difference is that the refractive index profile <span class="math notranslate nohighlight">\(n(r)\)</span> is now piecewise constant over many concentric rings rather than just two regions.</p>
+<p id="index-7"><span id="index-6"></span><span id="index-5"></span><span id="index-4"></span><strong>Scalar (Helmholtz) problem.</strong>
+The <code class="docutils literal notranslate"><span class="pre">BraggExactScalar</span></code> class solves the weakly-guiding approximation: find a propagation constant <span class="math notranslate nohighlight">\(\beta \in \mathbb{C}\)</span> and a nontrivial scalar field <span class="math notranslate nohighlight">\(\varphi : \mathbb{R}^2 \to \mathbb{C}\)</span> satisfying</p>
+<div class="math notranslate nohighlight">
+\[\tag{H}
+\Delta \varphi + k_0^2\, n^2(x,y)\, \varphi = \beta^2 \varphi \qquad \text{in } \mathbb{R}^2,
+\]</div>
+<p>together with the <strong>outgoing radiation condition</strong> at infinity. For a leaky mode the transverse wavenumber <span class="math notranslate nohighlight">\(\kappa = \sqrt{k_0^2 n_{\text{out}}^2 - \beta^2}\)</span> is complex, and outgoing means that <span class="math notranslate nohighlight">\(\varphi\)</span> behaves like the first Hankel function <span class="math notranslate nohighlight">\(H_\nu^{(1)}(\kappa r)\)</span> as <span class="math notranslate nohighlight">\(r \to \infty\)</span>. (Guided modes satisfy a square-integrability condition instead.) For Bragg fibers, all modes of interest are leaky. Throughout this notebook we use the time-harmonic convention</p>
+<div class="math notranslate nohighlight">
+\[
+e^{i(\beta z - \omega t)},
+\]</div>
+<p>so leaky modes have <span class="math notranslate nohighlight">\(\operatorname{Im}(\beta) &gt; 0\)</span>, with the imaginary part encoding the confinement loss rate.</p>
+<p id="index-8"><strong>Vector (Maxwell) problem.</strong>
+The <code class="docutils literal notranslate"><span class="pre">BraggExactVector</span></code> class solves the full Maxwell system. The system of
+equations is identical to the one derived in
+<a class="reference internal" href="1_4_stepindex_vector.html"><span class="std std-doc">Notebook 1.4</span></a>: find <span class="math notranslate nohighlight">\(\beta \in \mathbb{C}\)</span> and
+transverse fields <span class="math notranslate nohighlight">\((E_\tau, \varphi)\)</span> satisfying the coupled curl–curl system.
+The only change relative to Notebook 1.4 is the boundary condition at infinity:
+instead of a Dirichlet condition on a truncation boundary, the fields
+must satisfy the outgoing Hankel condition as <span class="math notranslate nohighlight">\(r \to \infty\)</span>. The
+transfer-matrix method enforces this analytically by picking solutions that
+match <span class="math notranslate nohighlight">\(H_\nu^{(1)}\)</span> in the outermost region — an exact treatment of the outer
+boundary that avoids the boundary-placement sensitivity in confinement-loss
+calculations documented for truncated/PML-based numerical models in
+<a class="reference internal" href="#references"><span class="xref myst">[1]</span></a>.</p>
+</section>
+<section id="matrix-methods-for-semi-analytical-solution">
+<h2>Matrix methods for semi-analytical solution<a class="headerlink" href="#matrix-methods-for-semi-analytical-solution" title="Link to this heading">#</a></h2>
+<p id="index-10"><span id="index-9"></span>As in <a class="reference internal" href="1_1_stepindex_exact.html"><span class="std std-doc">Notebook 1.1</span></a>, we find roots by assembling a characteristic equation based on Helmholtz solutions for weakly-guiding step-index fibers. Recall that there we formed a 2×2 system of equations, derived from enforcing the continuity of the Helmholtz solutions (Bessel functions) and their derivatives at the core-cladding interface. This time, we have many concentric rings of alternating indices, and thus many more interfacial continuity conditions to be satisfied. Our modes of interest are the ones that satisfy all of these conditions.</p>
+<p>We can utilize the <em>transfer matrix method</em> from <a class="reference internal" href="#references"><span class="xref myst">[2]</span></a> to represent the continuity condition at each interface with a matrix, and the composition of these matrices from layer to layer (from inside to outside) can be used to impose the continuity condition for the entire fiber. The determinant of this composition is what yields our new characteristic equation for the Bragg fiber, and we find the zeros of this equation to obtain propagation constants. From these propagation constants we can construct the corresponding eigenmodes.</p>
+<p>The key difference between the two semi-analytical classes is the choice of scalar or vector representation of the field: the vector representation comes from the Maxwell model of electromagnetic fields, while the scalar representation is used for an approximate Helmholtz model.  In <code class="docutils literal notranslate"><span class="pre">BraggExactVector</span></code>, the continuity conditions for the electric and magnetic fields (the Maxwell interface conditions) are used at interfaces, resulting in a 4×4 transfer matrix. In <code class="docutils literal notranslate"><span class="pre">BraggExactScalar</span></code>, since the field is represented by a scalar mode, the mode conditions reduce to a 2×2 system.</p>
+</section>
+<section id="constructing-a-bragg-fiber-instance">
+<h2>Constructing a Bragg fiber instance<a class="headerlink" href="#constructing-a-bragg-fiber-instance" title="Link to this heading">#</a></h2>
+<p>Any instance of <code class="docutils literal notranslate"><span class="pre">BraggExactScalar</span></code> or <code class="docutils literal notranslate"><span class="pre">BraggExactVector</span></code> takes the same
+arguments. The four layer-wise lists (all the same length) are:</p>
+<ul class="simple">
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">ts</span></code></strong> (float list) — dimensional thickness of each layer. The first entry
+is the core radius; subsequent entries are the thicknesses of each
+surrounding ring, proceeding outward. Values are non-dimensionalized by
+<code class="docutils literal notranslate"><span class="pre">scale</span></code> internally.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">ns</span></code></strong> (float or callable list) — refractive index of each layer. A callable
+entry is treated as a dispersion relation <code class="docutils literal notranslate"><span class="pre">n(wavelength)</span></code>.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">mats</span></code></strong> (string list) — material name of each layer. Arbitrary labels used
+to identify regions (no naming constraints for the analytical classes).</p></li>
+</ul>
+<p>Scalar parameters:</p>
+<ul class="simple">
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">scale</span></code></strong> — the characteristic length (in meters) used to non-dimensionalize
+the geometry. All <code class="docutils literal notranslate"><span class="pre">ts</span></code> values are divided by <code class="docutils literal notranslate"><span class="pre">scale</span></code> internally.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">wl</span></code></strong> — operating wavelength in meters.</p></li>
+</ul>
+<p>Note that the finite-element <code class="docutils literal notranslate"><span class="pre">Bragg</span></code> class in <a class="reference internal" href="2_2_bragg.html"><span class="std std-doc">Notebook 2.2</span></a>  additionally requires <code class="docutils literal notranslate"><span class="pre">maxhs</span></code>,<code class="docutils literal notranslate"><span class="pre">bcs</span></code>, <code class="docutils literal notranslate"><span class="pre">ref</span></code>, and <code class="docutils literal notranslate"><span class="pre">curve</span></code>. These are not accepted by <code class="docutils literal notranslate"><span class="pre">BraggExactScalar</span></code> or <code class="docutils literal notranslate"><span class="pre">BraggExactVector</span></code>, which are purely analytical and have no mesh.</p>
+</section>
+<section id="a-braggexactscalar-example">
+<h2>A <code class="docutils literal notranslate"><span class="pre">BraggExactScalar</span></code> example<a class="headerlink" href="#a-braggexactscalar-example" title="Link to this heading">#</a></h2>
+<div class="cell docutils container" id="index-13">
+<span id="index-12"></span><span id="index-11"></span><div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.optimize</span><span class="w"> </span><span class="kn">import</span> <span class="n">newton</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">fibermode.bragg</span><span class="w"> </span><span class="kn">import</span> <span class="n">BraggExactScalar</span><span class="p">,</span> <span class="n">BraggExactVector</span><span class="p">,</span> <span class="n">plotlogf</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s1">&#39;ignore&#39;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="ne">RuntimeWarning</span><span class="p">)</span>
+<span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s1">&#39;ignore&#39;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="ne">UserWarning</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<section id="geometry-and-initialization">
+<h3>Geometry and initialization<a class="headerlink" href="#geometry-and-initialization" title="Link to this heading">#</a></h3>
+<p>We can begin with <code class="docutils literal notranslate"><span class="pre">BraggExactScalar</span></code>. These inputs are the defaults:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">A</span> <span class="o">=</span> <span class="n">BraggExactScalar</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span>
+                     <span class="n">ts</span><span class="o">=</span><span class="p">[</span><span class="mf">5e-5</span><span class="p">,</span> <span class="mf">1e-5</span><span class="p">,</span> <span class="mf">2e-5</span><span class="p">],</span>
+                     <span class="n">ns</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mf">1.44</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+                     <span class="n">mats</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;air&#39;</span><span class="p">,</span> <span class="s1">&#39;glass&#39;</span><span class="p">,</span> <span class="s1">&#39;air&#39;</span><span class="p">],</span>
+                     <span class="n">wl</span><span class="o">=</span><span class="mf">1.2e-6</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>We can view the attributes of this fiber via <code class="docutils literal notranslate"><span class="pre">__dict__</span></code>:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">A</span><span class="o">.</span><span class="vm">__dict__</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>{&#39;scale&#39;: 1e-06,
+ &#39;L&#39;: 1e-06,
+ &#39;mats&#39;: [&#39;air&#39;, &#39;glass&#39;, &#39;air&#39;],
+ &#39;ns_in&#39;: [1, 1.44, 1],
+ &#39;_ts&#39;: array([5.e-05, 1.e-05, 2.e-05]),
+ &#39;rhos&#39;: array([5.e-05, 6.e-05, 8.e-05]),
+ &#39;_wavelength&#39;: 1.2e-06,
+ &#39;k0&#39;: 5235987.7559829885,
+ &#39;ns&#39;: array([1.  , 1.44, 1.  ]),
+ &#39;ks&#39;: array([5235987.75598299, 7539822.3686155 , 5235987.75598299])}
+</pre></div>
+</div>
+</div>
+</div>
+<p>From fiber theory, we know that the guided mode propagation constants satisfy
+<span class="math notranslate nohighlight">\(kn_{\text{clad}} &lt; \beta &lt; kn_{\text{core}}\)</span>. Here we compute the
+non-dimensional wavenumber bounds. Leaky mode propagation constants have real
+parts just below <span class="math notranslate nohighlight">\(kn_{\text{clad}}\)</span> (the lower cutoff) and a small negative
+imaginary part that encodes the radiation loss rate.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">k_low</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">k0</span> <span class="o">*</span> <span class="n">A</span><span class="o">.</span><span class="n">ns</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">A</span><span class="o">.</span><span class="n">scale</span>
+<span class="n">k_high</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">k0</span> <span class="o">*</span> <span class="n">A</span><span class="o">.</span><span class="n">ns</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">A</span><span class="o">.</span><span class="n">scale</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;low ... high:&#39;</span><span class="p">,</span> <span class="n">k_low</span><span class="p">,</span> <span class="s1">&#39;...&#39;</span><span class="p">,</span> <span class="n">k_high</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>low ... high: 5.235987755982988 ... 7.5398223686155035
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="finding-the-propagation-constant">
+<h3>Finding the propagation constant<a class="headerlink" href="#finding-the-propagation-constant" title="Link to this heading">#</a></h3>
+<p>Finding <span class="math notranslate nohighlight">\(\beta\)</span> amounts to finding the root of the transfer-matrix determinant  function implemented in the class. This root finding is successful when good initial guesses are provided.  We can utilize the <code class="docutils literal notranslate"><span class="pre">plotlogf</span></code> function to identify  good guesses, as illustrated below.</p>
+<p>Two more parameters must be chosen before searching for <span class="math notranslate nohighlight">\(\beta\)</span>.</p>
+<p><strong><code class="docutils literal notranslate"><span class="pre">nu</span></code></strong> is the azimuthal mode number. The field in each layer has an
+azimuthal dependence <span class="math notranslate nohighlight">\(e^{i\nu\phi}\)</span> for integer <span class="math notranslate nohighlight">\(\nu\)</span> where <span class="math notranslate nohighlight">\(\phi\)</span> is the
+azimuthal coordinate in the cylindrical coordinate system. For the scalar
+(<code class="docutils literal notranslate"><span class="pre">BraggExactScalar</span></code>) model the fundamental mode is azimuthally symmetric and has
+<span class="math notranslate nohighlight">\(\nu = 0\)</span>. (When discussing the vector Maxwell model <code class="docutils literal notranslate"><span class="pre">BraggExactVector</span></code> below,<br />
+the fundamental HE<span class="math notranslate nohighlight">\(_{11}\)</span> mode has <span class="math notranslate nohighlight">\(\nu = 1\)</span> instead, as explained later.)</p>
+<p><strong><code class="docutils literal notranslate"><span class="pre">outer</span></code></strong> selects which Hankel function represents the field in the
+outermost (unbounded) region:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">'h1'</span></code> — outer field is <span class="math notranslate nohighlight">\(H_\nu^{(1)}\)</span>. For leaky modes this is the
+outgoing-wave choice in the <span class="math notranslate nohighlight">\(e^{i(\beta z - \omega t)}\)</span> convention and
+should give <span class="math notranslate nohighlight">\(\operatorname{Im}(\beta) &gt; 0\)</span>. <strong>This is the convention used
+throughout <code class="docutils literal notranslate"><span class="pre">fibermode</span></code></strong> and is the  default.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'h2'</span></code> — outer field is <span class="math notranslate nohighlight">\(H_\nu^{(2)}\)</span>. Outgoing wave in the
+Yeh et al. <span class="math notranslate nohighlight">\(e^{i(\omega t - \beta z)}\)</span> convention, giving
+<span class="math notranslate nohighlight">\(\operatorname{Im}(\beta) &lt; 0\)</span> for leaky modes. Use only if you
+need the Yeh sign convention explicitly.</p></li>
+</ul>
+<p>In this example we search for a leaky mode, so we use <code class="docutils literal notranslate"><span class="pre">outer</span> <span class="pre">=</span> <span class="pre">'h1'</span></code> and,
+for the scalar fundamental, <code class="docutils literal notranslate"><span class="pre">nu</span> <span class="pre">=</span> <span class="pre">0</span></code>.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">outer</span> <span class="o">=</span> <span class="s1">&#39;h1&#39;</span>
+<span class="n">nu</span> <span class="o">=</span> <span class="mi">0</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">A.determinant(beta,</span> <span class="pre">nu,</span> <span class="pre">outer)</span></code> evaluates the transfer-matrix
+characteristic determinant at a given (possibly complex) <code class="docutils literal notranslate"><span class="pre">beta</span></code>. A zero of
+this function corresponds to a propagation constant.</p>
+<section id="visually-locating-the-region-to-search">
+<h4>Visually locating the region to search<a class="headerlink" href="#visually-locating-the-region-to-search" title="Link to this heading">#</a></h4>
+<p>It is not always easy to  find a zero of the above-mentioned <span class="math notranslate nohighlight">\(f\)</span>=<code class="docutils literal notranslate"><span class="pre">determinant</span></code> function.
+To make the zeros more visible, we use a 2D plot of <span class="math notranslate nohighlight">\(\log|f|\)</span> over a rectangular region of
+the complex plane: this is given by <code class="docutils literal notranslate"><span class="pre">plotlogf</span></code> which  plots <span class="math notranslate nohighlight">\(\log|f|\)</span> over a rectangular
+region of the complex <span class="math notranslate nohighlight">\(\beta\)</span>-plane, colored so that zeros of <span class="math notranslate nohighlight">\(f\)</span> appear as dark spots — a
+convenient way to survey candidate propagation constants before refining with a root-finder.</p>
+</section>
+<section id="survey-plot">
+<h4>Survey plot<a class="headerlink" href="#survey-plot" title="Link to this heading">#</a></h4>
+<p>We begin with a survey-style plot over a large region:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plotlogf</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">determinant</span><span class="p">,</span><span class="mf">.995</span><span class="o">*</span><span class="n">k_low</span><span class="p">,</span><span class="mf">1.0001</span><span class="o">*</span><span class="n">k_low</span><span class="p">,</span> <span class="o">-</span><span class="mf">.002</span><span class="p">,</span><span class="mf">.005</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">outer</span><span class="p">,</span> <span class="n">iref</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">rref</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">levels</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">5</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="_images/a6f21f7ff5caff64ee23fdbbe82df3367f79c49bd4507d2e4c7aad803641a978.png" src="_images/a6f21f7ff5caff64ee23fdbbe82df3367f79c49bd4507d2e4c7aad803641a978.png" />
+</div>
+</div>
+</section>
+<section id="first-zoom-in">
+<h4>First zoom in<a class="headerlink" href="#first-zoom-in" title="Link to this heading">#</a></h4>
+<p>And we can also zoom in further to the fundamental mode:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plotlogf</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">determinant</span><span class="p">,</span><span class="mf">.9999</span><span class="o">*</span><span class="n">k_low</span><span class="p">,</span><span class="mf">1.0001</span><span class="o">*</span><span class="n">k_low</span><span class="p">,</span> <span class="o">-</span><span class="mf">.0001</span><span class="p">,</span><span class="mf">.0001</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">outer</span><span class="p">,</span> <span class="n">iref</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">rref</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">levels</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">5</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="_images/ead1753f64edf7bfec2f34cc0d006f331b21e54129f461a1eb06d0a056377177.png" src="_images/ead1753f64edf7bfec2f34cc0d006f331b21e54129f461a1eb06d0a056377177.png" />
+</div>
+</div>
+</section>
+<section id="next-zoom-in">
+<h4>Next zoom in<a class="headerlink" href="#next-zoom-in" title="Link to this heading">#</a></h4>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plotlogf</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">determinant</span><span class="p">,</span><span class="mf">.9999</span><span class="o">*</span><span class="n">k_low</span><span class="p">,</span> <span class="mf">0.99999</span><span class="o">*</span><span class="n">k_low</span><span class="p">,</span> <span class="o">-</span><span class="mf">.0001</span><span class="p">,</span><span class="mf">.0001</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">outer</span><span class="p">,</span> <span class="n">iref</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">rref</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">levels</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">5</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="_images/363c8455d2c2c2cc9c95906e7babdbafba68a978fbd30a6640e22872d7288abb.png" src="_images/363c8455d2c2c2cc9c95906e7babdbafba68a978fbd30a6640e22872d7288abb.png" />
+</div>
+</div>
+</section>
+<section id="final-zoom-in">
+<h4>Final zoom in<a class="headerlink" href="#final-zoom-in" title="Link to this heading">#</a></h4>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plotlogf</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">determinant</span><span class="p">,</span><span class="mf">.999955</span><span class="o">*</span><span class="n">k_low</span><span class="p">,</span> <span class="mf">0.99996</span><span class="o">*</span><span class="n">k_low</span><span class="p">,</span> <span class="o">-</span><span class="mf">.000005</span><span class="p">,</span><span class="mf">.000005</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">outer</span><span class="p">,</span>
+         <span class="n">iref</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">rref</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">levels</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">5</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="_images/fbf856450412d9a054586e87661c57319dc9f2253d0e6772cc28a285b822e940.png" src="_images/fbf856450412d9a054586e87661c57319dc9f2253d0e6772cc28a285b822e940.png" />
+</div>
+</div>
+<p>The dark spot in the zoomed-in plot indicates the location of the root of the determinant function, which we will refine with a Newton solver. Looking at the  limits set in the plot command (in terms of fractions of <code class="docutils literal notranslate"><span class="pre">k_low</span></code>), we see that the real part of the root corresponding to the fundamental mode is located  somewhere close to the middle between <code class="docutils literal notranslate"><span class="pre">.999955*k_low</span></code> and <code class="docutils literal notranslate"><span class="pre">0.99996*k_low</span></code>. The imaginary part is small, as expected for a leaky mode.</p>
+</section>
+<section id="providing-initial-guesses-to-solver">
+<h4>Providing initial guesses to solver<a class="headerlink" href="#providing-initial-guesses-to-solver" title="Link to this heading">#</a></h4>
+<p>To obtain the propagation constant numerically, we refine the above-seen visual estimate with a Newton solver, i.e., with the initial guesses taken from the zoomed in plot above.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">visual_guess</span> <span class="o">=</span> <span class="p">(</span><span class="mf">.999955</span><span class="o">*</span><span class="n">k_low</span> <span class="o">+</span>  <span class="mf">0.99996</span><span class="o">*</span><span class="n">k_low</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">visual_guess</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>5.235765226503359
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">beta1</span> <span class="o">=</span> <span class="n">newton</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">determinant</span><span class="p">,</span> <span class="n">visual_guess</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">nu</span><span class="p">,</span> <span class="n">outer</span><span class="p">),</span> <span class="n">tol</span> <span class="o">=</span> <span class="mf">1e-15</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Scaled beta: &quot;</span><span class="p">,</span> <span class="n">beta1</span><span class="p">,</span> 
+      <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Residual of determinant: &quot;</span><span class="p">,</span> <span class="nb">abs</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">determinant</span><span class="p">(</span><span class="n">beta1</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">outer</span><span class="p">)))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Scaled beta:  (5.2357654056629634+2.6356530509847056e-08j) 
+Residual of determinant:  1.7060000182613857e-12
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="converting-to-the-non-dimensional-z-2-eigenvalue">
+<h3>Converting to the non-dimensional <span class="math notranslate nohighlight">\(Z^2\)</span> eigenvalue<a class="headerlink" href="#converting-to-the-non-dimensional-z-2-eigenvalue" title="Link to this heading">#</a></h3>
+<p>Note that the <code class="docutils literal notranslate"><span class="pre">beta1</span></code> above is <strong>not</strong> the physical propagation constant <span class="math notranslate nohighlight">\(\beta\)</span>
+(rad/m), i.e., the <em>“Scaled beta”</em> printout label above is literal. Inside
+<code class="docutils literal notranslate"><span class="pre">transfer_matrix</span></code>/<code class="docutils literal notranslate"><span class="pre">state_matrix</span></code>,  the wavenumber <code class="docutils literal notranslate"><span class="pre">k0</span> <span class="pre">=</span> <span class="pre">self.k0</span> <span class="pre">*</span> <span class="pre">self.scale</span></code>
+is already made dimensionless by the characteristic length <span class="math notranslate nohighlight">\(L\)</span> (<code class="docutils literal notranslate"><span class="pre">scale</span></code>), so
+for <code class="docutils literal notranslate"><span class="pre">(k0*n)**2</span> <span class="pre">-</span> <span class="pre">beta**2</span></code> inside <code class="docutils literal notranslate"><span class="pre">determinant</span></code> to be dimensionally consistent,
+the <code class="docutils literal notranslate"><span class="pre">beta</span></code> argument — and hence the root <code class="docutils literal notranslate"><span class="pre">beta1</span></code> found by the Newton solver —
+must also be the dimensionless quantity <span class="math notranslate nohighlight">\(L\beta\)</span>, not <span class="math notranslate nohighlight">\(\beta\)</span> itself. (This
+matches <code class="docutils literal notranslate"><span class="pre">k_low</span></code>/<code class="docutils literal notranslate"><span class="pre">k_high</span></code> above, which are themselves values of <span class="math notranslate nohighlight">\(Lk_0n\)</span>, not <span class="math notranslate nohighlight">\(k_0n\)</span>.)</p>
+<p>Elsewhere in this repository, guided and leaky modes are instead found and
+classified using a nondimensional <span class="math notranslate nohighlight">\(Z\)</span>-variable — see the <span class="math notranslate nohighlight">\(X\)</span>, <span class="math notranslate nohighlight">\(Y\)</span>, <span class="math notranslate nohighlight">\(Z\)</span> variables
+introduced in <a class="reference internal" href="1_1_stepindex_exact.html"><span class="std std-doc">Notebook 1.1</span></a> and
+<a class="reference internal" href="1_4_stepindex_vector.html"><span class="std std-doc">Notebook 1.4</span></a>, the <span class="math notranslate nohighlight">\(Z\)</span>-plane spectral structure
+discussed in <a class="reference internal" href="1_3_stepindex_leaky.html"><span class="std std-doc">Notebook 1.3</span></a>, and its formal
+definition</p>
+<div class="math notranslate nohighlight">
+\[
+Z^2 = L^2\left(k_0^2 n_0^2 - \beta^2\right)
+\]</div>
+<p>given in the “non-dimensional Z-plane” section of
+<a class="reference internal" href="2_2_bragg.html"><span class="std std-doc">Notebook 2.2</span></a>, where <span class="math notranslate nohighlight">\(\beta\)</span> here denotes the <em>physical</em>
+propagation constant and <span class="math notranslate nohighlight">\(n_0\)</span> denotes the outer refractive index. Class methods <code class="docutils literal notranslate"><span class="pre">sqrZfrom(..)</span></code> and <code class="docutils literal notranslate"><span class="pre">betafrom(..)</span></code> are defined in terms of this physical <span class="math notranslate nohighlight">\(\beta\)</span>. In order use <code class="docutils literal notranslate"><span class="pre">sqrZfrom(..)</span></code> to get the <span class="math notranslate nohighlight">\(Z^2\)</span>-value of <code class="docutils literal notranslate"><span class="pre">beta_1</span></code>, we must first undo the scaling already baked into the <code class="docutils literal notranslate"><span class="pre">beta1</span></code>, as done below.</p>
+<div class="cell docutils container" id="index-17">
+<span id="index-16"></span><span id="index-15"></span><span id="index-14"></span><div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">beta1_phys</span> <span class="o">=</span> <span class="n">beta1</span> <span class="o">/</span> <span class="n">A</span><span class="o">.</span><span class="n">scale</span>  <span class="c1"># undo the L-scaling baked into determinant&#39;s beta argument</span>
+<span class="n">Z2_scalar</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">sqrZfrom</span><span class="p">(</span><span class="n">beta1_phys</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Z^2 =&quot;</span><span class="p">,</span> <span class="n">Z2_scalar</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Z   = &quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">Z2_scalar</span><span class="p">),</span> 
+      <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">beta = the physical propagation constant =&quot;</span><span class="p">,</span> <span class="n">beta1_phys</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Z^2 = (0.0023283976667194395-2.759932213135152e-07j) 
+Z   =  (0.04825347319000004-2.859827521915164e-06j) 
+beta = the physical propagation constant = (5235765.405662963+0.026356530509847056j)
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="assembling-fields">
+<h3>Assembling fields<a class="headerlink" href="#assembling-fields" title="Link to this heading">#</a></h3>
+<p>With <code class="docutils literal notranslate"><span class="pre">beta1</span></code> we can assemble the fields using <code class="docutils literal notranslate"><span class="pre">fields_matplot(..)</span></code>, which returns
+plain Python callables suitable for matplotlib.</p>
+<p><code class="docutils literal notranslate"><span class="pre">FsA</span></code> below, is a dictionary of callable field functions returned by <code class="docutils literal notranslate"><span class="pre">fields_matplot</span></code>.
+The 1D radial plot shows the oscillatory decay in the glass ring and the
+outward-propagating tail in the outer air region, the hallmark of a leaky Bragg mode.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">FsA</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">fields_matplot</span><span class="p">(</span><span class="n">beta1</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">outer</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">FsA</span></code> contains two types of entries:</p>
+<ul class="simple">
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">'Ez_rad'</span></code></strong> (and similarly <code class="docutils literal notranslate"><span class="pre">'Hz_rad'</span></code>): a callable of the scalar radius <span class="math notranslate nohighlight">\(r\)</span>, returning the radial field profile.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">'Ez'</span></code></strong> (and similarly <code class="docutils literal notranslate"><span class="pre">'Hz'</span></code>): a callable of <span class="math notranslate nohighlight">\((x, y)\)</span>, returning the 2D field with the <span class="math notranslate nohighlight">\(e^{i\nu\phi}\)</span> azimuthal factor included.</p></li>
+</ul>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">A</span><span class="o">.</span><span class="n">plot2D_contour</span><span class="p">(</span><span class="n">FsA</span><span class="p">[</span><span class="s1">&#39;Ez&#39;</span><span class="p">],</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">7</span><span class="p">))</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">plot1D</span><span class="p">(</span><span class="n">FsA</span><span class="p">[</span><span class="s1">&#39;Ez_rad&#39;</span><span class="p">],</span> <span class="n">double_r</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">rlist</span><span class="o">=</span><span class="p">[</span><span class="mi">400</span><span class="p">,</span><span class="mi">10000</span><span class="p">,</span><span class="mi">400</span><span class="p">],</span> <span class="n">nu</span><span class="o">=</span><span class="n">nu</span><span class="p">,</span> <span class="n">maxscale</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                  <span class="n">linewidth</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="_images/37a96e658d0123195796422dc224e2e39eb7bcc2c30cf45b1f225eb2268b3177.png" src="_images/37a96e658d0123195796422dc224e2e39eb7bcc2c30cf45b1f225eb2268b3177.png" />
+<img alt="_images/33045442101c3cef9235c039c8e325a1fd515e5a83e9abcde87d5fdb1dd49b73.png" src="_images/33045442101c3cef9235c039c8e325a1fd515e5a83e9abcde87d5fdb1dd49b73.png" />
+</div>
+</div>
+<p>We will have more to say about tiny oscillations visible in the last plot (but not entirely clear in the plot above it).</p>
+</section>
+</section>
+<section id="the-corresponding-braggexactvector-example">
+<h2>The corresponding <code class="docutils literal notranslate"><span class="pre">BraggExactVector</span></code> example<a class="headerlink" href="#the-corresponding-braggexactvector-example" title="Link to this heading">#</a></h2>
+<p id="index-20"><span id="index-19"></span><span id="index-18"></span>The workflow for <code class="docutils literal notranslate"><span class="pre">BraggExactVector</span></code> follows the same three steps, but there are
+now six field components (<span class="math notranslate nohighlight">\(E_z\)</span>, <span class="math notranslate nohighlight">\(H_z\)</span>, <span class="math notranslate nohighlight">\(E_r\)</span>, <span class="math notranslate nohighlight">\(E_\phi\)</span>, <span class="math notranslate nohighlight">\(H_r\)</span>, <span class="math notranslate nohighlight">\(H_\phi\)</span> in  cylindrical coordinates <span class="math notranslate nohighlight">\(r, \phi, z\)</span>) rather than a single scalar field. The fundamental mode of the vector Maxwell model
+is the HE<span class="math notranslate nohighlight">\(_{11}\)</span> mode, which requires <span class="math notranslate nohighlight">\(\nu = 1\)</span>. Contrast this with the scalar fundamental mode which has <span class="math notranslate nohighlight">\(\nu = 0\)</span>.</p>
+<p>The shift from <span class="math notranslate nohighlight">\(\nu=0\)</span> to <span class="math notranslate nohighlight">\(\nu=1\)</span> reflects the vector nature of the field. This can be seen, for example, from the weakly guiding limit, where the fundamental mode field resembles a linearly polarized plane wave, such as the uniform Cartesian field <span class="math notranslate nohighlight">\(E = E_x \hat e_x\)</span>. Such a field,  when resolved into cylindrical components, gives <span class="math notranslate nohighlight">\(E = E_r \hat e_r + E_\phi \hat e_\phi = E_x \hat e_x\)</span>  shows that <span class="math notranslate nohighlight">\(E_r = E_x \cos \phi\)</span> and <span class="math notranslate nohighlight">\(E_\phi = -E_x \sin\phi\)</span>. Thus both <span class="math notranslate nohighlight">\(E_r\)</span> and <span class="math notranslate nohighlight">\(E_\phi\)</span> are proportional to <span class="math notranslate nohighlight">\(e^{\pm i\phi}\)</span>. So this mode has ν = 1 in the cylindrical separation, not ν = 0.  Thus, we expect the transverse cylindrical components <span class="math notranslate nohighlight">\((E_r, E_\phi)\)</span> of a field with a nearly uniform transverse direction to vary like <span class="math notranslate nohighlight">\(e^{\pm i\phi}\)</span>, so for the fundamental vector leaky mode we set  <span class="math notranslate nohighlight">\(\nu = 1\)</span> rather than <span class="math notranslate nohighlight">\(\nu = 0\)</span>. Higher-order vector modes use <span class="math notranslate nohighlight">\(\nu = 2, 3, \ldots\)</span></p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">B</span> <span class="o">=</span> <span class="n">BraggExactVector</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> 
+                     <span class="n">ts</span><span class="o">=</span><span class="p">[</span><span class="mf">5e-5</span><span class="p">,</span> <span class="mf">1e-5</span><span class="p">,</span> <span class="mf">2e-5</span><span class="p">],</span>
+                     <span class="n">ns</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mf">1.44</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+                     <span class="n">mats</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;air&#39;</span><span class="p">,</span> <span class="s1">&#39;glass&#39;</span><span class="p">,</span> <span class="s1">&#39;air&#39;</span><span class="p">],</span>
+                     <span class="n">wl</span><span class="o">=</span><span class="mf">1.2e-6</span><span class="p">)</span>
+
+<span class="n">k_low</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">k0</span> <span class="o">*</span> <span class="n">B</span><span class="o">.</span><span class="n">ns</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">B</span><span class="o">.</span><span class="n">scale</span>
+<span class="n">k_high</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">k0</span> <span class="o">*</span> <span class="n">B</span><span class="o">.</span><span class="n">ns</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">B</span><span class="o">.</span><span class="n">scale</span>
+
+<span class="n">outer</span> <span class="o">=</span> <span class="s1">&#39;h1&#39;</span>
+<span class="n">nu</span> <span class="o">=</span> <span class="mi">1</span>      <span class="c1"># as noted above</span>
+</pre></div>
+</div>
+</div>
+</div>
+<section id="the-propagation-constant-for-the-vector-case">
+<h3>The propagation constant for the vector case<a class="headerlink" href="#the-propagation-constant-for-the-vector-case" title="Link to this heading">#</a></h3>
+<p>As before, we first perform  a wide scan to survey mode locations across the leaky-mode region.
+Then a zoomed view resolves the fundamental mode location.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plotlogf</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">determinant</span><span class="p">,</span> <span class="mf">.995</span><span class="o">*</span><span class="n">k_low</span><span class="p">,</span> <span class="mf">1.0001</span><span class="o">*</span><span class="n">k_low</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">.005</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">outer</span><span class="p">,</span>
+         <span class="n">iref</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">rref</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">levels</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">8</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="_images/ae9e5e9c9522a21daaecbeb4a66e60d67f15a3f86e523f5e8ebe992f90e34ae3.png" src="_images/ae9e5e9c9522a21daaecbeb4a66e60d67f15a3f86e523f5e8ebe992f90e34ae3.png" />
+</div>
+</div>
+<p>Zooming in on what appears to be first leaky mode gives us this plot:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plotlogf</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">determinant</span><span class="p">,</span><span class="mf">.999955</span><span class="o">*</span><span class="n">k_low</span><span class="p">,</span> <span class="mf">0.99996</span><span class="o">*</span><span class="n">k_low</span><span class="p">,</span> <span class="o">-</span><span class="mf">.000006</span><span class="p">,</span><span class="mf">.000006</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">outer</span><span class="p">,</span>
+         <span class="n">iref</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">rref</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">levels</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">5</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="_images/d72cd5b71013bf22a86ea6a57553261b3868856f321cff93ad9065821971591a.png" src="_images/d72cd5b71013bf22a86ea6a57553261b3868856f321cff93ad9065821971591a.png" />
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">guess</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="mf">.99995</span><span class="o">*</span><span class="n">k_low</span><span class="p">)</span>
+
+<span class="n">beta2</span> <span class="o">=</span> <span class="n">newton</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">determinant</span><span class="p">,</span> <span class="n">guess</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">nu</span><span class="p">,</span> <span class="n">outer</span><span class="p">),</span> <span class="n">tol</span> <span class="o">=</span> <span class="mf">1e-15</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Scaled beta of vector case: &quot;</span><span class="p">,</span> <span class="n">beta2</span><span class="p">,</span> 
+      <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Residual of determinant: &quot;</span><span class="p">,</span> <span class="nb">abs</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">determinant</span><span class="p">(</span><span class="n">beta2</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">outer</span><span class="p">)),</span>
+      <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Cf. prior scaled beta of scalar case:&quot;</span><span class="p">,</span> <span class="n">beta1</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Scaled beta of vector case:  (5.235764623018904+6.891942784408688e-08j) 
+Residual of determinant:  5.342203243281762e-07 
+Cf. prior scaled beta of scalar case: (5.2357654056629634+2.6356530509847056e-08j)
+</pre></div>
+</div>
+</div>
+</div>
+<p>As in the scalar case, <code class="docutils literal notranslate"><span class="pre">beta2</span></code> is the <span class="math notranslate nohighlight">\(L\)</span>-scaled root of <code class="docutils literal notranslate"><span class="pre">determinant</span></code>, not the physical <span class="math notranslate nohighlight">\(\beta\)</span>, so we again divide by <code class="docutils literal notranslate"><span class="pre">B.scale</span></code> before calling <code class="docutils literal notranslate"><span class="pre">sqrZfrom</span></code> —
+matching the <span class="math notranslate nohighlight">\(Z^2\)</span>-plane search used for the vector case in
+<a class="reference internal" href="2_2_bragg.html"><span class="std std-doc">Notebook 2.2</span></a>:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">beta2_phys</span> <span class="o">=</span> <span class="n">beta2</span> <span class="o">/</span> <span class="n">B</span><span class="o">.</span><span class="n">scale</span>  <span class="c1"># undo the L-scaling baked into determinant&#39;s beta argument</span>
+<span class="n">Z2_vector</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">sqrZfrom</span><span class="p">(</span><span class="n">beta2_phys</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Z^2 =&quot;</span><span class="p">,</span> <span class="n">Z2_scalar</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Z   = &quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">Z2_vector</span><span class="p">),</span> 
+      <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">beta = the physical propagation constant =&quot;</span><span class="p">,</span> <span class="n">beta2_phys</span><span class="p">,</span>
+      <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Cf. prior beta of scalar case:&quot;</span><span class="p">,</span> <span class="n">beta1_phys</span><span class="p">,</span> 
+      <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Cf. prior Z^2  of scalar case:&quot;</span><span class="p">,</span> <span class="n">Z2_scalar</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Z^2 = (0.0023283976667194395-2.759932213135152e-07j) 
+Z   =  (0.048338320235773995-7.465007066540988e-06j) 
+beta = the physical propagation constant = (5235764.623018904+0.06891942784408689j) 
+Cf. prior beta of scalar case: (5235765.405662963+0.026356530509847056j) 
+Cf. prior Z^2  of scalar case: (0.0023283976667194395-2.759932213135152e-07j)
+</pre></div>
+</div>
+</div>
+</div>
+<p>Clearly the scalar and vector models give very similar results for the fundamental mode, as expected.</p>
+</section>
+<section id="vector-mode-plots">
+<h3>Vector mode plots<a class="headerlink" href="#vector-mode-plots" title="Link to this heading">#</a></h3>
+<p>Facilties for plotting the vector fields are similar to the scalar case. The relevant  methods are
+<code class="docutils literal notranslate"><span class="pre">fields_matplot</span></code>, <code class="docutils literal notranslate"><span class="pre">plot2D_contour</span></code>, <code class="docutils literal notranslate"><span class="pre">plot2D_streamlines</span></code>, and <code class="docutils literal notranslate"><span class="pre">plot1D</span></code>.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fields_mpl</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">fields_matplot</span><span class="p">(</span><span class="n">beta2</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">outer</span><span class="p">)</span>
+<span class="n">fields_mpl</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>dict_keys([&#39;Ez&#39;, &#39;Ez_rad&#39;, &#39;Hz&#39;, &#39;Hz_rad&#39;, &#39;Er&#39;, &#39;Er_rad&#39;, &#39;Ephi&#39;, &#39;Ephi_rad&#39;, &#39;Hr&#39;, &#39;Hr_rad&#39;, &#39;Hphi&#39;, &#39;Hphi_rad&#39;, &#39;Ex&#39;, &#39;Ey&#39;, &#39;Hx&#39;, &#39;Hy&#39;, &#39;Sz&#39;, &#39;Sz_rad&#39;])
+</pre></div>
+</div>
+</div>
+</div>
+<p>The method <code class="docutils literal notranslate"><span class="pre">fields_matplot</span></code> returns a dictionary whose values are plain Python callables
+of <span class="math notranslate nohighlight">\((x, y)\)</span> (or <span class="math notranslate nohighlight">\(r\)</span> for <code class="docutils literal notranslate"><span class="pre">_rad</span></code> variants) — suitable for matplotlib.
+The available keys are:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="s1">&#39;Ez&#39;</span><span class="p">,</span> <span class="s1">&#39;Ez_rad&#39;</span><span class="p">,</span> <span class="s1">&#39;Hz&#39;</span><span class="p">,</span> <span class="s1">&#39;Hz_rad&#39;</span><span class="p">,</span>
+<span class="s1">&#39;Er&#39;</span><span class="p">,</span> <span class="s1">&#39;Er_rad&#39;</span><span class="p">,</span> <span class="s1">&#39;Ephi&#39;</span><span class="p">,</span> <span class="s1">&#39;Ephi_rad&#39;</span><span class="p">,</span>
+<span class="s1">&#39;Hr&#39;</span><span class="p">,</span> <span class="s1">&#39;Hr_rad&#39;</span><span class="p">,</span> <span class="s1">&#39;Hphi&#39;</span><span class="p">,</span> <span class="s1">&#39;Hphi_rad&#39;</span><span class="p">,</span>
+<span class="s1">&#39;Ex&#39;</span><span class="p">,</span> <span class="s1">&#39;Ey&#39;</span><span class="p">,</span> <span class="s1">&#39;Hx&#39;</span><span class="p">,</span> <span class="s1">&#39;Hy&#39;</span><span class="p">,</span> <span class="s1">&#39;Sz&#39;</span><span class="p">,</span> <span class="s1">&#39;Sz_rad&#39;</span>
+</pre></div>
+</div>
+<p>We can visualize  the longitudinal <span class="math notranslate nohighlight">\(E_z\)</span> as a 2D contour plot as well  as a 1D radial profile, as
+shown below.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">B</span><span class="o">.</span><span class="n">plot2D_contour</span><span class="p">(</span><span class="n">fields_mpl</span><span class="p">[</span><span class="s1">&#39;Ez&#39;</span><span class="p">],</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">));</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="_images/58ef18153b87bc16a55829e649fa3494a3cad1dde366c1ab2c7f8cd691582300.png" src="_images/58ef18153b87bc16a55829e649fa3494a3cad1dde366c1ab2c7f8cd691582300.png" />
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">plot1D</span><span class="p">(</span><span class="n">fields_mpl</span><span class="p">[</span><span class="s1">&#39;Er_rad&#39;</span><span class="p">],</span> <span class="n">double_r</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+              <span class="n">rlist</span><span class="o">=</span><span class="p">[</span><span class="mi">400</span><span class="p">,</span> <span class="mi">10000</span><span class="p">,</span> <span class="mi">400</span><span class="p">],</span> <span class="n">nu</span><span class="o">=</span><span class="n">nu</span><span class="p">,</span>
+              <span class="n">maxscale</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;steelblue&#39;</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">7</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="_images/b10130a62f1d7235635723a2b9b5d70b87e7ac6cedad56421b366288a5a1e9c4.png" src="_images/b10130a62f1d7235635723a2b9b5d70b87e7ac6cedad56421b366288a5a1e9c4.png" />
+</div>
+</div>
+<p>We may also display fields using 1D plots.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">plot1D</span><span class="p">(</span><span class="n">fields_mpl</span><span class="p">[</span><span class="s1">&#39;Ez_rad&#39;</span><span class="p">],</span> <span class="n">double_r</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">rlist</span><span class="o">=</span><span class="p">[</span><span class="mi">400</span><span class="p">,</span><span class="mi">10000</span><span class="p">,</span><span class="mi">400</span><span class="p">],</span> <span class="n">nu</span><span class="o">=</span><span class="n">nu</span><span class="p">,</span> <span class="n">maxscale</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                  <span class="n">linewidth</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">7</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="_images/124f7d446fbf81737f2f9610028f0f5aa78672072ddc074dff37f9141ae038a2.png" src="_images/124f7d446fbf81737f2f9610028f0f5aa78672072ddc074dff37f9141ae038a2.png" />
+</div>
+</div>
+<p>Finally, <code class="docutils literal notranslate"><span class="pre">plot2D_streamlines</span></code> draws the transverse electric field as a
+streamlines plot overlaid on a color-filled contour of the field magnitude
+(<code class="docutils literal notranslate"><span class="pre">contourfunc</span></code>). This is useful for visualizing the polarization structure
+of the HE<span class="math notranslate nohighlight">\(_{11}\)</span> mode: the streamlines trace the direction of transverse
+electric field across the fiber cross-section. Parameters <code class="docutils literal notranslate"><span class="pre">seed_nr</span></code>
+and <code class="docutils literal notranslate"><span class="pre">seed_ntheta</span></code> control where streamlines are seeded.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">mag</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">fields_mpl</span><span class="p">[</span><span class="s1">&#39;Ex&#39;</span><span class="p">](</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">))</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">fields_mpl</span><span class="p">[</span><span class="s1">&#39;Ey&#39;</span><span class="p">](</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">))</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">plot2D_streamlines</span><span class="p">(</span><span class="n">fields_mpl</span><span class="p">[</span><span class="s1">&#39;Ex&#39;</span><span class="p">],</span> <span class="n">fields_mpl</span><span class="p">[</span><span class="s1">&#39;Ey&#39;</span><span class="p">],</span> <span class="n">contourfunc</span><span class="o">=</span><span class="n">mag</span><span class="p">,</span> <span class="n">seed_nr</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">seed_ntheta</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span> 
+                               <span class="n">rho_linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">broken_streamlines</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                               <span class="n">maxlength</span><span class="o">=</span><span class="mf">.3</span><span class="p">,</span> <span class="n">plot_seed</span><span class="o">=</span><span class="kc">False</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="_images/ff7d2d425ad65e39bbb33364708a661df53123723657db95082cd4b836a993d7.png" src="_images/ff7d2d425ad65e39bbb33364708a661df53123723657db95082cd4b836a993d7.png" />
+</div>
+</div>
+</section>
+</section>
+<section id="further-models">
+<h2>Further models<a class="headerlink" href="#further-models" title="Link to this heading">#</a></h2>
+<p>The single concentric-ring construction used throughout this notebook can be extended to multiple glass rings separated by air.  Such layered air/glass geometry — with <span class="math notranslate nohighlight">\(N\)</span> alternating anti-resonant layers — is also used as a simplified model
+for hollow-core, anti-resonant fibers (ARFs). Equivalent simplified Bragg fiber models to represent the more complex ARFs are common. The paper  <a class="reference internal" href="#references"><span class="xref myst">[3]</span></a> contains more information, including   analytic expressions, for such cases.</p>
+<p><a id='references'></a></p>
+</section>
+<section id="references">
+<h2>References<a class="headerlink" href="#references" title="Link to this heading">#</a></h2>
+<p>[1] P. Vandenberge, J. Gopalakrishnan, and J. Grosek, “Sensitivity of Confinement Losses in Optical Fibers to Modeling Approach,” <em>Optics Express</em> 31(16), 26735–26756 (2023). Open Access, DOI: <a class="reference external" href="https://doi.org/10.1364/OE.495467">10.1364/OE.495467</a></p>
+<p>[2] P. Yeh, A. Yariv, and E. Marom, “Theory of Bragg fiber,” <em>J. Opt. Soc. Am.</em> 68(9), 1196–1201 (1978). DOI: <a class="reference external" href="https://doi.org/10.1364/JOSA.68.001196">10.1364/JOSA.68.001196</a></p>
+<p>[3] D. Bird, “Attenuation of model hollow-core, anti-resonant fibres,” <em>Optics Express</em> 25(19), 23215 (2017). DOI: <a class="reference external" href="https://doi.org/10.1364/OE.25.023215">10.1364/OE.25.023215</a></p>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./."
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="2_bragg.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title"><span class="section-number">2. </span>Bragg Fiber</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="2_2_bragg.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title"><span class="section-number">2.2. </span>Numerical computation of Bragg fiber leaky modes</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-leaky-mode-eigenproblems">The leaky mode eigenproblems</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#matrix-methods-for-semi-analytical-solution">Matrix methods for semi-analytical solution</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#constructing-a-bragg-fiber-instance">Constructing a Bragg fiber instance</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-braggexactscalar-example">A <code class="docutils literal notranslate"><span class="pre">BraggExactScalar</span></code> example</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#geometry-and-initialization">Geometry and initialization</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#finding-the-propagation-constant">Finding the propagation constant</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#visually-locating-the-region-to-search">Visually locating the region to search</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#survey-plot">Survey plot</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#first-zoom-in">First zoom in</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#next-zoom-in">Next zoom in</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#final-zoom-in">Final zoom in</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#providing-initial-guesses-to-solver">Providing initial guesses to solver</a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#converting-to-the-non-dimensional-z-2-eigenvalue">Converting to the non-dimensional <span class="math notranslate nohighlight">\(Z^2\)</span> eigenvalue</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#assembling-fields">Assembling fields</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-corresponding-braggexactvector-example">The corresponding <code class="docutils literal notranslate"><span class="pre">BraggExactVector</span></code> example</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-propagation-constant-for-the-vector-case">The propagation constant for the vector case</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#vector-mode-plots">Vector mode plots</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#further-models">Further models</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#references">References</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jay Gopalakrishnan
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

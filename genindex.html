@@ -1,0 +1,897 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Index &#8212; Computing Optical Fiber Modes</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="_static/togglebutton.css?v=13237357" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="_static/togglebutton.js?v=4a39c7ea"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'genindex';</script>
+    <link rel="index" title="Index" href="#" />
+    <link rel="search" title="Search" href="search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="README.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="_static/NGfiber.png" class="logo__image only-light" alt="Computing Optical Fiber Modes - Home"/>
+    <script>document.write(`<img src="_static/NGfiber.png" class="logo__image only-dark" alt="Computing Optical Fiber Modes - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="README.html">
+                    Computing Optical Fiber Modes
+                </a>
+            </li>
+        </ul>
+        <ul class="current nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="1_stepindex.html">1. Step-Index Fiber</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="1_1_stepindex_exact.html">1.1. Analytic expressions for guided modes of a step-index fiber</a></li>
+<li class="toctree-l2"><a class="reference internal" href="1_2_stepindex.html">1.2. Numerical computation of guided modes of a step-index fiber</a></li>
+<li class="toctree-l2"><a class="reference internal" href="1_3_stepindex_leaky.html">1.3. Leaky modes of a step-index fiber</a></li>
+<li class="toctree-l2"><a class="reference internal" href="1_4_stepindex_vector.html">1.4. Vector guided modes of a step-index fiber</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="2_bragg.html">2. Bragg Fiber</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="2_1_bragg_exact.html">2.1. Semi-analytical methods for Bragg fiber modes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="2_2_bragg.html">2.2. Numerical computation of Bragg fiber leaky modes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="2_3_bragg_adaptivity.html">2.3. Adaptive computation of vector leaky modes in a Bragg fiber</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Index</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+<a href="https://github.com/jayggg/fibermode" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Index</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+
+<h1 id="index">Index</h1>
+
+<div class="genindex-jumpbox">
+ <a href="#A"><strong>A</strong></a>
+ | <a href="#B"><strong>B</strong></a>
+ | <a href="#C"><strong>C</strong></a>
+ | <a href="#D"><strong>D</strong></a>
+ | <a href="#E"><strong>E</strong></a>
+ | <a href="#F"><strong>F</strong></a>
+ | <a href="#G"><strong>G</strong></a>
+ | <a href="#H"><strong>H</strong></a>
+ | <a href="#I"><strong>I</strong></a>
+ | <a href="#L"><strong>L</strong></a>
+ | <a href="#M"><strong>M</strong></a>
+ | <a href="#N"><strong>N</strong></a>
+ | <a href="#O"><strong>O</strong></a>
+ | <a href="#P"><strong>P</strong></a>
+ | <a href="#R"><strong>R</strong></a>
+ | <a href="#S"><strong>S</strong></a>
+ | <a href="#T"><strong>T</strong></a>
+ | <a href="#V"><strong>V</strong></a>
+ | <a href="#X"><strong>X</strong></a>
+ | <a href="#Z"><strong>Z</strong></a>
+ 
+</div>
+<h2 id="A">A</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    adaptive FEM
+
+      <ul>
+        <li><a href="2_3_bragg_adaptivity.html#index-0">leaky modes</a>
+</li>
+      </ul></li>
+      <li>
+    adaptive loop
+
+      <ul>
+        <li><a href="2_3_bragg_adaptivity.html#index-7">Solve-Estimate-Mark-Refine</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    ansatz
+
+      <ul>
+        <li><a href="1_4_stepindex_vector.html#index-4">time-harmonic</a>
+</li>
+        <li><a href="1_4_stepindex_vector.html#index-5">waveguide mode</a>, <a href="2_1_bragg_exact.html#index-8">[1]</a>
+</li>
+      </ul></li>
+      <li><a href="1_4_stepindex_vector.html#index-15">azimuthal mode number</a>, <a href="2_1_bragg_exact.html#index-12">[1]</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="B">B</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="2_1_bragg_exact.html#index-14">beta conversion</a>
+</li>
+      <li><a href="2_1_bragg_exact.html#index-13">boundary condition at infinity</a>
+</li>
+      <li>
+    Bragg
+
+      <ul>
+        <li><a href="2_3_bragg_adaptivity.html#index-4">adaptive computation</a>
+</li>
+        <li><a href="2_2_bragg.html#index-0">class</a>
+</li>
+        <li><a href="2_2_bragg.html#index-5">constructor parameters</a>, <a href="2_3_bragg_adaptivity.html#index-6">[1]</a>
+</li>
+      </ul></li>
+      <li><a href="2_1_bragg_exact.html#index-0">Bragg fiber</a>
+
+      <ul>
+        <li><a href="2_2_bragg.html#index-3">numerical</a>
+</li>
+        <li><a href="2_1_bragg_exact.html#index-10">transfer matrix</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    BraggExactScalar
+
+      <ul>
+        <li><a href="2_1_bragg_exact.html#index-1">class</a>
+</li>
+        <li><a href="2_1_bragg_exact.html#index-11">example</a>
+</li>
+      </ul></li>
+      <li>
+    BraggExactVector
+
+      <ul>
+        <li><a href="2_1_bragg_exact.html#index-2">class</a>
+</li>
+        <li><a href="2_1_bragg_exact.html#index-18">example</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="C">C</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    characteristic equation
+
+      <ul>
+        <li><a href="1_4_stepindex_vector.html#index-16">vector</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="1_1_stepindex_exact.html#index-3">characteristic equation for X</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="D">D</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    dual-weighted residual
+
+      <ul>
+        <li><a href="2_3_bragg_adaptivity.html#index-1">error estimator</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    DWR
+
+      <ul>
+        <li><a href="2_3_bragg_adaptivity.html#index-2">error estimator</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="E">E</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    eigensolver
+
+      <ul>
+        <li><a href="1_3_stepindex_leaky.html#index-5">polynomial</a>
+</li>
+      </ul></li>
+      <li>
+    eigenvalue problem
+
+      <ul>
+        <li><a href="1_4_stepindex_vector.html#index-8">vector</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    electric field
+
+      <ul>
+        <li><a href="1_4_stepindex_vector.html#index-9">transverse</a>
+</li>
+      </ul></li>
+      <li>
+    error
+
+      <ul>
+        <li><a href="1_2_stepindex.html#index-8">eigenvalue</a>
+</li>
+      </ul></li>
+      <li><a href="2_3_bragg_adaptivity.html#index-3">error estimator</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="F">F</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="1_2_stepindex.html#index-5">FEAST algorithm</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    fine-scale
+
+      <ul>
+        <li><a href="2_3_bragg_adaptivity.html#index-8">oscillations</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="G">G</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    guided modes
+
+      <ul>
+        <li><a href="1_2_stepindex.html#index-1">numerical</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    guidedvecmodes
+
+      <ul>
+        <li><a href="1_4_stepindex_vector.html#index-1">method</a>
+</li>
+      </ul></li>
+      <li><a href="1_4_stepindex_vector.html#index-24">guidedvecmodes method</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="H">H</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="1_4_stepindex_vector.html#index-25">Hausdorff distance</a>
+</li>
+      <li><a href="1_4_stepindex_vector.html#index-23">HE11 mode</a>
+
+      <ul>
+        <li><a href="2_1_bragg_exact.html#index-19">Bragg fiber</a>, <a href="2_2_bragg.html#index-12">[1]</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    Helmholtz equation
+
+      <ul>
+        <li><a href="2_1_bragg_exact.html#index-5">scalar</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="I">I</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="1_2_stepindex.html#index-2">index well</a>
+
+      <ul>
+        <li><a href="1_4_stepindex_vector.html#index-6">nondimensionalized</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="L">L</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    leaky modes
+
+      <ul>
+        <li><a href="2_1_bragg_exact.html#index-3">Bragg fiber</a>
+</li>
+        <li><a href="2_1_bragg_exact.html#index-4">eigenproblems</a>
+</li>
+      </ul></li>
+      <li>
+    leakymode
+
+      <ul>
+        <li><a href="2_2_bragg.html#index-1">method</a>
+</li>
+        <li><a href="2_2_bragg.html#index-9">scalar</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    leakyvecmodes
+
+      <ul>
+        <li><a href="2_2_bragg.html#index-10">method</a>, <a href="2_2_bragg.html#index-2">[1]</a>
+</li>
+      </ul></li>
+      <li>
+    leakyvecmodes_adapt_gen
+
+      <ul>
+        <li><a href="2_3_bragg_adaptivity.html#index-5">method</a>
+</li>
+      </ul></li>
+      <li>
+    loss
+
+      <ul>
+        <li><a href="1_3_stepindex_leaky.html#index-0">confinement loss formula</a>
+</li>
+        <li><a href="1_3_stepindex_leaky.html#index-1">db/m from propagation constant</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="M">M</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    maxhs
+
+      <ul>
+        <li><a href="2_2_bragg.html#index-7">mesh parameter</a>
+</li>
+      </ul></li>
+      <li><a href="1_4_stepindex_vector.html#index-2">Maxwell equations</a>
+
+      <ul>
+        <li><a href="1_4_stepindex_vector.html#index-7">curl-curl form</a>
+</li>
+        <li><a href="2_1_bragg_exact.html#index-6">vector</a>
+</li>
+      </ul></li>
+      <li>
+    mesh
+
+      <ul>
+        <li><a href="2_2_bragg.html#index-6">Bragg fiber</a>
+</li>
+      </ul></li>
+      <li>
+    modes
+
+      <ul>
+        <li><a href="1_2_stepindex.html#index-7">comparison with exact</a>
+</li>
+        <li><a href="1_4_stepindex_vector.html#index-14">EH</a>, <a href="1_4_stepindex_vector.html#index-21">[1]</a>
+</li>
+        <li><a href="1_3_stepindex_leaky.html#index-6">evanescent</a>
+</li>
+        <li><a href="1_1_stepindex_exact.html#index-4">exact stepindex expressions</a>
+</li>
+        <li><a href="1_1_stepindex_exact.html#index-0">guided mode equation</a>
+</li>
+        <li><a href="1_4_stepindex_vector.html#index-11">HE</a>, <a href="1_4_stepindex_vector.html#index-20">[1]</a>, <a href="2_1_bragg_exact.html#index-20">[2]</a>
+</li>
+        <li><a href="1_4_stepindex_vector.html#index-22">hybrid</a>
+</li>
+        <li><a href="1_3_stepindex_leaky.html#index-8">leaky</a>
+</li>
+        <li><a href="1_3_stepindex_leaky.html#index-7">radiation</a>
+</li>
+        <li><a href="1_4_stepindex_vector.html#index-12">TE</a>, <a href="1_4_stepindex_vector.html#index-18">[1]</a>
+</li>
+        <li><a href="1_4_stepindex_vector.html#index-13">TM</a>, <a href="1_4_stepindex_vector.html#index-19">[1]</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="N">N</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="1_1_stepindex_exact.html#index-2">nondimensional root</a>
+</li>
+      <li>
+    nondimensionalization
+
+      <ul>
+        <li><a href="2_1_bragg_exact.html#index-17">Bragg fiber</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="1_2_stepindex.html#index-6">Nufern Yb fiber</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="O">O</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="2_3_bragg_adaptivity.html#index-9">oscillations</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="2_1_bragg_exact.html#index-7">outgoing boundary condition</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="P">P</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    perfectly matched layer
+
+      <ul>
+        <li><a href="2_2_bragg.html#index-4">frequency-dependent</a>
+</li>
+      </ul></li>
+      <li>
+    phi
+
+      <ul>
+        <li><a href="1_4_stepindex_vector.html#index-10">scaled longitudinal component</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    PML
+
+      <ul>
+        <li><a href="1_3_stepindex_leaky.html#index-4">frequency-dependent</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="R">R</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="2_3_bragg_adaptivity.html#index-10">ripples</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="S">S</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    scalar leaky mode
+
+      <ul>
+        <li><a href="2_2_bragg.html#index-8">Bragg fiber</a>
+</li>
+      </ul></li>
+      <li><a href="1_2_stepindex.html#index-0">Step index class</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    step-index fiber
+
+      <ul>
+        <li><a href="1_4_stepindex_vector.html#index-3">vector modes</a>
+</li>
+      </ul></li>
+      <li>
+    StepIndexExact
+
+      <ul>
+        <li><a href="1_4_stepindex_vector.html#index-17">vec_propagation_constants</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="T">T</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="2_1_bragg_exact.html#index-9">transfer matrix method</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="V">V</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="1_1_stepindex_exact.html#index-1">V-number</a>, <a href="1_2_stepindex.html#index-4">[1]</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="1_4_stepindex_vector.html#index-0">vector modes</a>
+
+      <ul>
+        <li><a href="2_2_bragg.html#index-11">Bragg fiber</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="X">X</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="1_1_stepindex_exact.html#index-2">X</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="1_1_stepindex_exact.html#index-5">X and propagation constant</a>, <a href="1_3_stepindex_leaky.html#index-2">[1]</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="Z">Z</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="1_3_stepindex_leaky.html#index-3">Z and X</a>
+</li>
+      <li><a href="2_1_bragg_exact.html#index-15">Z conversion</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="1_2_stepindex.html#index-3">Z-plane</a>
+
+      <ul>
+        <li><a href="2_1_bragg_exact.html#index-16">Z squared eigenvalue</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jay Gopalakrishnan
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
