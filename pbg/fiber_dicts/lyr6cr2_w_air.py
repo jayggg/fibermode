@@ -41,8 +41,6 @@ n0 = n_outer                            # base refractive index for V function
 
 # PML Parameters
 alpha = 5                       # PML factor
-pml_type = 'radial'
-square_buffer = .25
 
 
 # Mesh Parameters. Non-Dimensional
@@ -83,8 +81,6 @@ params = {
     't_poly': t_poly,
     't_outer': t_outer,
     'alpha': alpha,
-    'pml_type': pml_type,
-    'square_buffer': square_buffer,
 
     'pml_maxh': pml_maxh,
     'buffer_maxh': buffer_maxh,
