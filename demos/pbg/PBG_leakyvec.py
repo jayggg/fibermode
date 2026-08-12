@@ -1,5 +1,5 @@
-from fiberamp.fiber.microstruct.pbg import PBG
-from fiberamp.fiber.microstruct.pbg.fiber_dicts.lyr6cr2 import params
+from fibermode import PBG
+from fibermode.pbg.fiber_dicts.lyr6cr2 import params
 
 if __name__ == '__main__':
 
