@@ -6,39 +6,81 @@ from pyeigfeast.spectralproj.ngs import NGvecs
 
 
 class PBG(ModeSolver):
-    """
-    Create a Photonic Band Gap (PBG) fiber object.
+    """Create a Photonic Band Gap (PBG) fiber object,
+    aka Photonic Crystal Fibers (PCFs).
 
-    These types of fibers have a lattice like microstructure that can allow
-    modes to be carried in a lower index core region.  It is also possible
-    to model Photonic Crystal Fibers (PCFs) via this class using appropriate
-    parameters.  The PBG object can then be used to find the modes of the
-    associated fiber using methods from the parent class ModeSolver.
+    These types of fibers have a lattice like microstructure that can
+    allow modes to be carried in a lower index core region.  The PBG
+    object can then be used to find the modes of the associated fiber
+    using methods from the parent class ModeSolver.
+
+    GEOMETRY: concentric regions, from the center outward (material
+    name in create_mesh(), and the fiber_param_dict key controlling
+    its mesh density, given in parentheses):
+
+       core ('core', core_maxh): the central defect region of radius
+            r_core where the mode is guided. Formed by omitting the
+            innermost 'skip' layers of the surrounding lattice.
+
+       lattice, out to radius r_fiber ('clad' background + 'tube'
+            holes, clad_maxh + tube_maxh): a p-sided polygonal lattice
+            (p=6 is hexagonal) of 'layers' number of total rings of tubes
+            of radius r_tube on a pitch (ring spacing) of Λ, embedded in
+            a solid background. Only the outer (layers - skip) rings
+            are actually present. The innermost 'skip' rings are
+            left out to create the core defect above. Additionally,
+            'pattern' can override which lattice sites hold a tube.
+
+       poly jacket, thickness t_poly, out to r_poly ('poly',
+            poly_maxh): e.g. a polymer coating; zero-thickness (and so
+            physically absent) in the common case t_poly=0.
+
+       buffer, thickness t_buffer, out to r_pml ('buffer',
+            buffer_maxh).
+
+       PML, thickness t_outer, out to r_out (pml_maxh): the outermost
+            layer, a single material 'Outer' (the name ModeSolver
+            requires for the PML region).
+
+       Nondimensional radii R, Rout (= r_pml/scale, r_out/scale) mark
+       the start/end of the PML for ModeSolver; R_fiber = r_fiber /
+       scale marks where the refractive index becomes constant.
 
     Inputs for Constructor
     ----------
     fiber_param_dict : dict
-        Dictionary of parameters needed to construct the fiber. These are
-        set as attributes.
+        Dictionary of parameters needed to construct the fiber; every
+        key is set as an attribute via setattr (so any key not listed
+        below is also accepted, silently, with no effect unless code
+        elsewhere reads it -- stick to the keys below). See the
+        fiber_dicts submodule (e.g. fiber_dicts.lyr6cr2.params) for
+        worked, self-consistent examples of every key derived from a
+        handful of physical inputs.
 
     Attributes
     ----------
     - p: int
         The number of sides of the polygonal lattice. Default is 6.
     - layers: int
-        Number of layers of tubes forming microstructure region.
+        Number of rings of tubes forming the lattice (see GEOMETRY).
     - skip: int
-        Number of layers skipped to make the core region. Does not subtract
-        from total number of tubes forming microstructure region.
+        Number of innermost lattice rings omitted to form the core
+        defect (see GEOMETRY). Does not change 'layers'.
+    - pattern: list
+        Optional override of which lattice sites hold a tube; [] (the
+        typical default) uses every site in the non-skipped rings.
     - Λ: float
-        Distance separating layers of tubes.
+        Lattice pitch: center-to-center spacing between rings of tubes.
     - r_tube: float
-        Radius of the tubes.
+        Radius of each tube (hole) in the lattice.
     - r_core: float
         Radius of the core region (formed by skipping layers).
     - r_fiber: float
-        Radius of the fiber as a whole.  More generally this can be
-        any radius after which refractive profile is homogeneous.
+        Outer radius of the lattice region -- see GEOMETRY.
+    - r_poly, r_pml, r_out: floats
+        Outer radii of the poly jacket, buffer, and PML regions
+        respectively -- see GEOMETRY. Related to r_fiber by the
+        thicknesses t_poly, t_buffer, t_outer.
     - scale: float
         Factor by which to scale the fiber parameters to make a
         non-dimensional geometry.  Frequently chosen to make the core
@@ -47,16 +89,20 @@ class PBG(ModeSolver):
         need to rebuild the object.
     - n_tube, n_clad: float
         Refractive indices of the tube and cladding material respectively.
-    - n_core, n_buffer, n_outer: float
-        Refractive indices in the respective regions.
+    - n_core, n_poly, n_buffer, n_outer: float
+        Refractive indices in the respective regions (see GEOMETRY).
     - n0 : float
         Base refractive index used in the refractive index function V.
-    - t_buffer, t_outer: float
-        Thickness of the buffer and PML regions respectively.
+    - t_poly, t_buffer, t_outer: float
+        Thickness of the poly jacket, buffer, and PML regions
+        respectively (see GEOMETRY).
     - alpha: float
         PML parameter.
-    - pml_maxh, air_maxh, tube_maxh, clad_maxh, core_maxh: floats
-        Maximum element diameter for mesh on respective regions.
+    - pml_maxh, buffer_maxh, tube_maxh, clad_maxh, poly_maxh,
+      core_maxh: floats
+        Maximum element diameter (NGSolve maxh) for the mesh in the
+        correspondingly-named region -- see GEOMETRY for exactly which
+        physical region each one controls.
     - R_fiber: float
         Non-Dimensional radius after which refractive index function is
         constant.
@@ -121,9 +167,7 @@ class PBG(ModeSolver):
                                  self.layers,
                                  self.skip,
                                  self.p,
-                                 self.pattern,
-                                 pml_type=self.pml_type,
-                                 square_buffer=self.square_buffer)
+                                 self.pattern)
 
         # Create Mesh
         self.refinements = 0
@@ -137,8 +181,6 @@ class PBG(ModeSolver):
             'buffer': self.n_buffer,
             'core': self.n_core,
             'poly': self.n_poly,
-            'NS_pml': self.n_outer,
-            'EW_pml': self.n_outer
         }
         self.index = ng.CoefficientFunction([
             self.refractive_index_dict[mat]
@@ -219,39 +261,19 @@ class PBG(ModeSolver):
     def create_mesh(self, ref=0, curve=3):
         """Set materials, max diameters and create mesh."""
         # Set the materials for the domain.
-        if self.pml_type == 'radial':
-            mat = {
-                6: 'poly',
-                5: 'Outer',
-                4: 'buffer',
-                3: 'tube',
-                2: 'clad',
-                1: 'core'
-            }
+        mat = {
+            6: 'poly',
+            5: 'Outer',
+            4: 'buffer',
+            3: 'tube',
+            2: 'clad',
+            1: 'core'
+        }
 
-            for domain, material in mat.items():
-                self.geo.SetMaterial(domain, material)
+        for domain, material in mat.items():
+            self.geo.SetMaterial(domain, material)
 
-            self.geo.SetDomainMaxH(5, self.pml_maxh)
-
-        elif self.pml_type == 'square':
-            mat = {
-                8: 'NS_pml',
-                7: 'EW_pml',
-                6: 'poly',
-                5: 'Outer',
-                4: 'buffer',
-                3: 'tube',
-                2: 'clad',
-                1: 'core'
-            }
-
-            for domain, material in mat.items():
-                self.geo.SetMaterial(domain, material)
-
-            self.geo.SetDomainMaxH(5, self.pml_maxh)
-            self.geo.SetDomainMaxH(7, self.pml_maxh)
-            self.geo.SetDomainMaxH(8, self.pml_maxh)
+        self.geo.SetDomainMaxH(5, self.pml_maxh)
 
         # Set maxh on domains
         self.geo.SetDomainMaxH(1, self.core_maxh)
@@ -279,9 +301,7 @@ class PBG(ModeSolver):
                                  self.layers,
                                  self.skip,
                                  self.p,
-                                 self.pattern,
-                                 pml_type=self.pml_type,
-                                 square_buffer=self.square_buffer)
+                                 self.pattern)
 
         self.create_mesh(ref=0, curve=3)
 
@@ -296,6 +316,7 @@ class PBG(ModeSolver):
 
     def curve(self, curve=3):
         self.mesh.Curve(curve)
+        self.curveorder = curve
 
     def geometry(self,
                  Λ,
@@ -311,9 +332,7 @@ class PBG(ModeSolver):
                  p=6,
                  pattern=[],
                  rot=0,
-                 hexcore=True,
-                 pml_type='radial',
-                 square_buffer=.5):
+                 hexcore=True):
         """
         Construct and return Non-Dimensionalized geometry.
 
@@ -351,17 +370,6 @@ class PBG(ModeSolver):
             region is created.  For a hexagonal core, the radius is defined
             as the distance from the center to a vertex of the hexagon, and
             the value used for this is r_core. The default is True.
-        pml_type: string, optional
-            Determine geometrical type of pml. Options are 'radial' or
-            'square'. If square is chosen, buffer region must be included, and
-            this is ensured using the square_buffer parameter.  Default is
-            'radial'.
-        square_buffer: float, optional
-            Enforce buffer thickness for square pml.  If provided radius of
-            fiber and radius of buffer are equal, this will add a square
-            buffer region with minimal distance to the fiber of
-            square_buffer * R_fiber.  The default of .5 ensures buffer region
-            is at least half a fiber radius separated from the fiber itself.
 
         Returns
         -------
@@ -428,114 +436,54 @@ class PBG(ModeSolver):
 
         # Create boundary of fiber, polymer and PML region
 
-        if pml_type == 'radial':
+        if R_fiber == R_pml:  # No buffer layer or polymer layer
+            print('no buffer no polymer')
+            geo.AddCircle(c=(0, 0),
+                          r=R_pml,
+                          leftdomain=2,
+                          rightdomain=5,
+                          bc='fiber_pml_interface')
+            geo.AddCircle(c=(0, 0),
+                          r=R_out,
+                          leftdomain=5,
+                          bc="OuterCircle")
 
-            if R_fiber == R_pml:  # No buffer layer or polymer layer
-                print('no buffer no polymer')
-                geo.AddCircle(c=(0, 0),
-                              r=R_pml,
-                              leftdomain=2,
-                              rightdomain=5,
-                              bc='fiber_pml_interface')
-                geo.AddCircle(c=(0, 0),
-                              r=R_out,
-                              leftdomain=5,
-                              bc="OuterCircle")
-
-            else:  # one or both exist
-                if R_fiber == R_poly:  # No polymer layer, but yes buffer
-
-                    geo.AddCircle(c=(0, 0),
-                                  r=R_fiber,
-                                  leftdomain=2,
-                                  rightdomain=4,
-                                  bc='fiber_buffer_interface')
-                    geo.AddCircle(c=(0, 0),
-                                  r=R_pml,
-                                  leftdomain=4,
-                                  rightdomain=5,
-                                  bc='buffer_pml_interface')
-                    geo.AddCircle(c=(0, 0),
-                                  r=R_out,
-                                  leftdomain=5,
-                                  bc="OuterCircle")
-
-                elif R_poly == R_pml:  # No buffer layer, but yes polymer
-
-                    geo.AddCircle(c=(0, 0),
-                                  r=R_fiber,
-                                  leftdomain=2,
-                                  rightdomain=6,
-                                  bc='fiber_polymer_interface')
-                    geo.AddCircle(c=(0, 0),
-                                  r=R_poly,
-                                  leftdomain=6,
-                                  rightdomain=5,
-                                  bc='polymer_pml_interface')
-                    geo.AddCircle(c=(0, 0),
-                                  r=R_out,
-                                  leftdomain=5,
-                                  bc="OuterCircle")
-
-                else:  # Both polymer and buffer
-                    geo.AddCircle(c=(0, 0),
-                                  r=R_fiber,
-                                  leftdomain=2,
-                                  rightdomain=6,
-                                  bc='fiber_polymer_interface')
-                    geo.AddCircle(c=(0, 0),
-                                  r=R_poly,
-                                  leftdomain=6,
-                                  rightdomain=4,
-                                  bc='polymer_buffer_interface')
-                    geo.AddCircle(c=(0, 0),
-                                  r=R_pml,
-                                  leftdomain=4,
-                                  rightdomain=5,
-                                  bc='buffer_pml_interface')
-                    geo.AddCircle(c=(0, 0),
-                                  r=R_out,
-                                  leftdomain=5,
-                                  bc="OuterCircle")
-
-        elif pml_type == 'square':
-
-            if R_poly == R_pml:  # Need to enforce buffer space
-                R_pml = (1 + square_buffer) * R_poly  # give buffer space
-
-            if R_pml > self.Rout:
-                raise ValueError("Beginning of Pml set to start outside Rout,\
- adjust buffer width, square buffer factor, or Rout to allow meshing.")
-
-            self.R = R_pml  # reset non-dimensional pml starting radius
-
-            pnts = [(-R_pml, -R_pml), (R_pml, -R_pml), (R_pml, R_pml),
-                    (-R_pml, R_pml), (-R_out, -R_out), (-R_pml, -R_out),
-                    (R_pml, -R_out), (R_out, -R_out), (R_out, -R_pml),
-                    (R_out, R_pml), (R_out, R_out), (R_pml, R_out),
-                    (-R_pml, R_out), (-R_out, R_out), (-R_out, R_pml),
-                    (-R_out, -R_pml)]
-
-            pml_pnts = [geo.AppendPoint(*pnt) for pnt in pnts]
-            inner_curves = [["line", pml_pnts[i], pml_pnts[i + 1]]
-                            for i in range(3)]
-            inner_curves.append(["line", pml_pnts[3], pml_pnts[0]])
-
-            outer_curves = [["line", pml_pnts[i], pml_pnts[i + 1]]
-                            for i in range(4,
-                                           len(pnts) - 1)]
-            outer_curves.append(["line", pml_pnts[len(pnts) - 1], pml_pnts[4]])
-
-            if R_fiber == R_poly:  # no polymer layer, just buffer
+        else:  # one or both exist
+            if R_fiber == R_poly:  # No polymer layer, but yes buffer
 
                 geo.AddCircle(c=(0, 0),
                               r=R_fiber,
                               leftdomain=2,
                               rightdomain=4,
                               bc='fiber_buffer_interface')
+                geo.AddCircle(c=(0, 0),
+                              r=R_pml,
+                              leftdomain=4,
+                              rightdomain=5,
+                              bc='buffer_pml_interface')
+                geo.AddCircle(c=(0, 0),
+                              r=R_out,
+                              leftdomain=5,
+                              bc="OuterCircle")
 
-            else:  # must be buffer layer, so we have polymer and buffer
+            elif R_poly == R_pml:  # No buffer layer, but yes polymer
 
+                geo.AddCircle(c=(0, 0),
+                              r=R_fiber,
+                              leftdomain=2,
+                              rightdomain=6,
+                              bc='fiber_polymer_interface')
+                geo.AddCircle(c=(0, 0),
+                              r=R_poly,
+                              leftdomain=6,
+                              rightdomain=5,
+                              bc='polymer_pml_interface')
+                geo.AddCircle(c=(0, 0),
+                              r=R_out,
+                              leftdomain=5,
+                              bc="OuterCircle")
+
+            else:  # Both polymer and buffer
                 geo.AddCircle(c=(0, 0),
                               r=R_fiber,
                               leftdomain=2,
@@ -546,61 +494,15 @@ class PBG(ModeSolver):
                               leftdomain=6,
                               rightdomain=4,
                               bc='polymer_buffer_interface')
-
-            for i, c in enumerate(inner_curves):
-                if i % 2 == 0:
-                    geo.Append(c,
-                               bc='buffer_pml_interface',
-                               leftdomain=4,
-                               rightdomain=5)
-                else:
-                    geo.Append(c,
-                               bc='buffer_pml_interface',
-                               leftdomain=4,
-                               rightdomain=5)
-
-            for i, c in enumerate(outer_curves):
-                if i in [1, 7]:
-                    geo.Append(c, bc='OuterCircle', leftdomain=5)
-                elif i in [4, 10]:
-                    geo.Append(c, bc='OuterCircle', leftdomain=5)
-                else:
-                    geo.Append(c, bc='OuterCircle', leftdomain=5)
-
-            geo.Append(["line", pml_pnts[5], pml_pnts[0]],
-                       bc='int_pml_edge',
-                       leftdomain=5,
-                       rightdomain=5)
-            geo.Append(["line", pml_pnts[6], pml_pnts[1]],
-                       bc='int_pml_edge',
-                       leftdomain=5,
-                       rightdomain=5)
-            geo.Append(["line", pml_pnts[8], pml_pnts[1]],
-                       bc='int_pml_edge',
-                       leftdomain=5,
-                       rightdomain=5)
-            geo.Append(["line", pml_pnts[9], pml_pnts[2]],
-                       bc='int_pml_edge',
-                       leftdomain=5,
-                       rightdomain=5)
-            geo.Append(["line", pml_pnts[11], pml_pnts[2]],
-                       bc='int_pml_edge',
-                       leftdomain=5,
-                       rightdomain=5)
-            geo.Append(["line", pml_pnts[12], pml_pnts[3]],
-                       bc='int_pml_edge',
-                       leftdomain=5,
-                       rightdomain=5)
-            geo.Append(["line", pml_pnts[14], pml_pnts[3]],
-                       bc='int_pml_edge',
-                       leftdomain=5,
-                       rightdomain=5)
-            geo.Append(["line", pml_pnts[15], pml_pnts[0]],
-                       bc='int_pml_edge',
-                       leftdomain=5,
-                       rightdomain=5)
-        else:
-            raise NotImplementedError('PML type must be square or radial')
+                geo.AddCircle(c=(0, 0),
+                              r=R_pml,
+                              leftdomain=4,
+                              rightdomain=5,
+                              bc='buffer_pml_interface')
+                geo.AddCircle(c=(0, 0),
+                              r=R_out,
+                              leftdomain=5,
+                              bc="OuterCircle")
 
         return geo
 
@@ -688,8 +590,11 @@ class PBG(ModeSolver):
         """Create NGvec object containing modes and set data given by array."""
         if mesh is None:
             mesh = self.mesh
-        X = ng.HCurl(mesh, order=p+1-max(1-p, 0), type1=True,
-                     dirichlet='OuterCircle', complex=True)
+        X = ng.HCurl(mesh,
+                     order=p + 1 - max(1 - p, 0),
+                     type1=True,
+                     dirichlet='OuterCircle',
+                     complex=True)
         m = array.shape[1]
         E = NGvecs(X, m)
         try:
@@ -704,7 +609,7 @@ ing to array has been passed as keyword p.")
         """Create NGvec object containing modes and set data given by array."""
         if mesh is None:
             mesh = self.mesh
-        Y = ng.H1(mesh, order=p+1, dirichlet='OuterCircle', complex=True)
+        Y = ng.H1(mesh, order=p + 1, dirichlet='OuterCircle', complex=True)
         m = array.shape[1]
         phi = NGvecs(Y, m)
         try:
@@ -714,43 +619,6 @@ ing to array has been passed as keyword p.")
  constructed the same as for input array and that polynomial degree correspond\
 ing to array has been passed as keyword p.")
         return phi
-
-    # SAVE & LOAD #####################################################
-
-    def save_mesh(self, name):
-        """ Save mesh using pickle (allows for mesh curvature). """
-        if name[-4:] != '.pkl':
-            name += '.pkl'
-        with open(name, 'wb') as f:
-            pickle.dump(self.mesh, f)
-
-    def save_modes(self, modes, name):
-        """Save modes as numpy arrays."""
-        if name[-4:] == '.npy':
-            name -= '.npy'
-        np.save(name, modes.tonumpy())
-
-    def load_mesh(self, name):
-        """ Load a saved ARF mesh."""
-        if name[-4:] != '.pkl':
-            name += '.pkl'
-        with open(name, 'rb') as f:
-            pmesh = pickle.load(f)
-        return pmesh
-
-    def load_E_modes(self, mesh_name, mode_name, p=8):
-        """Load transverse vectore E modes and associated mesh"""
-        mesh = self.load_mesh(mesh_name)
-        if mode_name[-4:] == '.npy':
-            mode_name -= '.npy'
-        array = np.load(mode_name+'.npy')
-        return self.E_modes_from_array(array, mesh=mesh, p=p)
-
-    def load_phi_modes(self, mesh_name, mode_name, p=8):
-        """Load transverse vectore E modes and associated mesh"""
-        mesh = self.load_mesh(mesh_name)
-        array = np.load(mode_name+'.npy')
-        return self.phi_modes_from_array(array, mesh=mesh, p=p)
 
 
 # End of class PBG ###################################
