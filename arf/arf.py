@@ -7,16 +7,26 @@ surrounding a "core" region of air.
 import netgen.geom2d as geom2d
 import ngsolve as ng
 import numpy as np
-from pyeigfeast.spectralproj.ngs import NGvecs
 from fibermode.solvers import ModeSolver
 from fibermode.utilities import sellmeier
 
 
 class ARF(ModeSolver):
+    """Class with facilities to numerically approximate leaky modes of
+    antiresonant hollow-core microstructured fibers (HC ARF), typically
+    made of 6 or 8 thin capillary tubes surrounding a hollow "core"
+    region of air, using a nondimensional eigenproblem and FEAST.
 
-    def __init__(self, name=None, freecapil=False,
-                 outermaterials=None, curve=3, refine=0,
-                 e=None, **kwargs):
+    """
+
+    def __init__(self,
+                 name=None,
+                 freecapil=False,
+                 outermaterials=None,
+                 curve=3,
+                 refine=0,
+                 e=None,
+                 **kwargs):
         """
         PARAMETERS:
 
@@ -37,12 +47,29 @@ class ARF(ModeSolver):
                 gives the default setting of all air outside of the physical
                 fiber cross-section.
 
-           kwargs: Override default values of updatable length attributes.
-                Give length values in units of micrometers, e.g.,
+           kwargs: Override any of the following attributes. Note
+                unrecognized keywords are silently accepted (they just
+                become an unused attribute via setattr) rather than
+                raising an error, so stick to the names below:
+
+                Updatable length attributes (in micrometers), e.g.
                     ARF(touter=15)
-                yields a PML thickness of 15 micrometers in physical units.
-                A keyword argument 'scaling', if given, will also divide
-                the updatable length attributes by 'scaling'.
+                yields a PML thickness of 15 micrometers in physical
+                units: Rc, Rto, Rti, t, d, tclad, touter, touterair.
+
+                scaling: divides the updatable length attributes above
+                by 'scaling' to get the nondimensional lengths actually
+                used in the mesh/geometry.
+
+                Mesh density attributes (nondimensional maxh, i.e.
+                NGSolve's max element size in each region), e.g.
+                    ARF(name='kolyadin', capillary_maxhs=0.1)
+                coarsens the capillary-tube mesh (finer default is
+                0.02 there): capillary_maxhs, air_maxhs,
+                inner_core_maxhs, glass_maxhs, outer_maxhs.
+
+                ngmesh: an existing netgen mesh to reuse instead of
+                generating a new one from the geometry.
         """
 
         self.freecapil = freecapil
@@ -52,12 +79,13 @@ class ARF(ModeSolver):
 
         # Updatable length attributes. All lengths are in micrometers.
 
-        self.updatablelengths = ['Rc', 'Rto', 'Rti', 't', 'd', 'tclad',
-                                 'touter', 'touterair']
+        self.updatablelengths = [
+            'Rc', 'Rto', 'Rti', 't', 'd', 'tclad', 'touter', 'touterair'
+        ]
 
         # Physical parameters
 
-        self.n_air = 1.00027717     # refractive index of air
+        self.n_air = 1.00027717  # refractive index of air
         self.n_si = sellmeier.index(self.wavelength, material='FusedSilica')
         self.NA_pol = 0.46
         self.n_pol = np.sqrt(self.n_si**2 - self.NA_pol**2)
@@ -71,16 +99,23 @@ class ARF(ModeSolver):
         if 'scaling' in kwargs:
             self.scaling = kwargs['scaling']
 
+        # Now that any *_maxhs/scaling overrides from kwargs have been
+        # applied, (re)compute elements-per-wavelength so that printed
+        # mesh-density info reflects what's actually being meshed.
+        self.epw = self.eltsperwave()
+
         # Scale updatablelengths and store scaled values in class attributes
         # whose name has an 's' appended. Only the scaled values are used
         # for geometry and mesh construction.
         for key in self.updatablelengths:
-            setattr(self, key + 's', getattr(self, key)/self.scaling)
+            setattr(self, key + 's', getattr(self, key) / self.scaling)
 
         # attributes in addition to updatablelengths for reconstructing obj
         #    (don't save scaling: avoid re-re-scaling!)
-        self.savableattr = ['freecapil', 'n_air', 'n_si', 'wavelength',
-                            'e', 's', 'scaling', 'refined']
+        self.savableattr = [
+            'freecapil', 'n_air', 'n_si', 'wavelength', 'e', 's', 'scaling',
+            'refined'
+        ]
 
         if self.freecapil:
             # outer radius of glass sheath
@@ -89,7 +124,8 @@ class ARF(ModeSolver):
             self.Rcladi = self.Rcs + 2 * self.Rtos
         else:
             # radius where glass sheath (cladding) begins
-            self.Rcladi = self.Rcs + self.ts + 2*self.Rtis + self.ts*(1-self.e)
+            self.Rcladi = self.Rcs + self.ts + 2 * self.Rtis + self.ts * (
+                1 - self.e)
             # outer radius of glass sheath
             self.Rclado = self.Rcladi + self.tclads
 
@@ -100,12 +136,12 @@ class ARF(ModeSolver):
         # BOUNDARY & MATERIAL NAMES
 
         self.material = {
-            'Outer': 1,          # outer most annular layer (PML)
-            'OuterAir': 2,       # air outside jacket
-            'Si': 3,             # cladding & capillaries are glass
+            'Outer': 1,  # outer most annular layer (PML)
+            'OuterAir': 2,  # air outside jacket
+            'Si': 3,  # cladding & capillaries are glass
             'CapillaryEncl': 4,  # air regions enclosed by capillaries
-            'InnerCore': 5,      # inner hollow core (air) region r < Rc
-            'FillAir': 6,        # remaining intervening spaces (air)
+            'InnerCore': 5,  # inner hollow core (air) region r < Rc
+            'FillAir': 6,  # remaining intervening spaces (air)
         }
         mat = self.material
         self.boundary = {
@@ -116,13 +152,13 @@ class ARF(ModeSolver):
             'AirCircle': [mat['OuterAir'], mat['Outer']],
 
             # circle  separating outer most layer from cladding
-            'OuterClad':   [mat['Si'], mat['OuterAir']],
+            'OuterClad': [mat['Si'], mat['OuterAir']],
 
             # inner circular boundary of capillary tubes
-            'CapilInner':  [mat['CapillaryEncl'], mat['Si']],
+            'CapilInner': [mat['CapillaryEncl'], mat['Si']],
 
             # artificial inner circular core boundary
-            'Inner':       [mat['InnerCore'], mat['FillAir']],
+            'Inner': [mat['InnerCore'], mat['FillAir']],
 
             # outer boundary of capillaries and the inner boundary of
             # sheath/cladding together forms one curve in the case
@@ -134,7 +170,7 @@ class ARF(ModeSolver):
             # cladding/sheath is disconnected  from the outer boundaries of
             # capillaries, so we have these two curves (which do not
             # exist in the embedded capillary case).
-            'CladInner':  [mat['FillAir'], mat['Si']],
+            'CladInner': [mat['FillAir'], mat['Si']],
             'CapilOuter': [mat['Si'], mat['FillAir']],
         }
 
@@ -181,13 +217,13 @@ class ARF(ModeSolver):
 
         # Make the outer materials tuple contain two elements as needed.
         if outermaterials is None:
-            self.outermaterials = ('air',) * 2
+            self.outermaterials = ('air', ) * 2
         elif isinstance(outermaterials, str):
-            self.outermaterials = (outermaterials,) * 2
+            self.outermaterials = (outermaterials, ) * 2
         elif len(outermaterials) == 0:
-            self.outermaterials = ('air',) * 2
+            self.outermaterials = ('air', ) * 2
         elif len(outermaterials) == 1:
-            self.outermaterials = (outermaterials[0],) * 2
+            self.outermaterials = (outermaterials[0], ) * 2
         else:
             self.outermaterials = outermaterials[:2]
 
@@ -210,12 +246,14 @@ class ARF(ModeSolver):
             n_outer = self.n_pol
 
         # index of refraction
-        self.indexdict = {'Outer':         n_outer,
-                          'OuterAir':      n_outerair,
-                          'Si':            self.n_si,
-                          'CapillaryEncl': self.n_air,
-                          'InnerCore':     self.n_air,
-                          'FillAir':       self.n_air}
+        self.indexdict = {
+            'Outer': n_outer,
+            'OuterAir': n_outerair,
+            'Si': self.n_si,
+            'CapillaryEncl': self.n_air,
+            'InnerCore': self.n_air,
+            'FillAir': self.n_air
+        }
         self.index = ng.CoefficientFunction(
             [self.indexdict[mat] for mat in self.mesh.GetMaterials()])
 
@@ -223,7 +261,6 @@ class ARF(ModeSolver):
         L = self.scaling * 1e-6
         n0 = self.indexdict['Outer']
         super().__init__(self.mesh, L, n0)
-
 
     @classmethod
     def from_dict(cls, d):
@@ -256,12 +293,14 @@ class ARF(ModeSolver):
             n_outer = self.n_pol
 
         # Reset index of refraction
-        self.indexdict = {'Outer':         n_outer,
-                          'OuterAir':      n_outerair,
-                          'Si':            self.n_si,
-                          'CapillaryEncl': self.n_air,
-                          'InnerCore':     self.n_air,
-                          'FillAir':       self.n_air}
+        self.indexdict = {
+            'Outer': n_outer,
+            'OuterAir': n_outerair,
+            'Si': self.n_si,
+            'CapillaryEncl': self.n_air,
+            'InnerCore': self.n_air,
+            'FillAir': self.n_air
+        }
         self.index = ng.CoefficientFunction(
             [self.indexdict[mat] for mat in self.mesh.GetMaterials()])
 
@@ -273,15 +312,17 @@ class ARF(ModeSolver):
         a = self.scaling * 1e-6
         k = 2 * np.pi / self.wavelength
         idx = self.indexdict
-        m = {'Outer':         0,
-             'OuterAir':      idx['Outer']**2 - idx['OuterAir']**2,
-             'Si':            idx['Outer']**2 - idx['Si']**2,
-             'CapillaryEncl': idx['Outer']**2 - idx['CapillaryEncl']**2,
-             'InnerCore':     idx['Outer']**2 - idx['InnerCore']**2,
-             'FillAir':       idx['Outer']**2 - idx['FillAir']**2}
+        m = {
+            'Outer': 0,
+            'OuterAir': idx['Outer']**2 - idx['OuterAir']**2,
+            'Si': idx['Outer']**2 - idx['Si']**2,
+            'CapillaryEncl': idx['Outer']**2 - idx['CapillaryEncl']**2,
+            'InnerCore': idx['Outer']**2 - idx['InnerCore']**2,
+            'FillAir': idx['Outer']**2 - idx['FillAir']**2
+        }
 
-        self.V = ng.CoefficientFunction(
-            [(a*k)**2 * m[mat] for mat in self.mesh.GetMaterials()])
+        self.V = ng.CoefficientFunction([(a * k)**2 * m[mat]
+                                         for mat in self.mesh.GetMaterials()])
         self.k = k
 
     def set(self, name=None, e=None):
@@ -316,14 +357,14 @@ class ARF(ModeSolver):
         if self.name == 'poletti':
             # This case gives the default attributes of the fiber.
 
-            self.Rc = 15                  # core radius
-            self.Rto = 12.9               # capillary outer radius
-            self.Rti = 12.48              # capillary inner radius
+            self.Rc = 15  # core radius
+            self.Rto = 12.9  # capillary outer radius
+            self.Rti = 12.48  # capillary inner radius
             self.t = self.Rto - self.Rti  # capillary thickness
-            self.tclad = 10               # glass jacket (cladding) thickness
-            self.touter = 50              # outer PML thickness
+            self.tclad = 10  # glass jacket (cladding) thickness
+            self.touter = 50  # outer PML thickness
             self.touterair = 10
-            self.scaling = self.Rc        # scaling for the PDE
+            self.scaling = self.Rc  # scaling for the PDE
             self.num_capillary_tubes = 6  # number of capillaries
             self.s = 0.05
             if e is not None:
@@ -347,14 +388,14 @@ class ARF(ModeSolver):
             self.refined = 0
 
         elif self.name == 'kolyadin':
-            self.Rc = 59.5                # core radius
-            self.Rto = 31.5               # capillary outer radius
-            self.Rti = 25.5               # capillary inner radius
+            self.Rc = 59.5  # core radius
+            self.Rto = 31.5  # capillary outer radius
+            self.Rti = 25.5  # capillary inner radius
             self.t = self.Rto - self.Rti  # capillary thickness
-            self.tclad = 1.2 * self.Rti   # glass jacket (cladding) thickness
-            self.touter = 100             # outer jacket (PML) thickness
+            self.tclad = 1.2 * self.Rti  # glass jacket (cladding) thickness
+            self.touter = 100  # outer jacket (PML) thickness
             self.touterair = self.tclad
-            self.scaling = self.Rc        # scaling for the PDE
+            self.scaling = self.Rc  # scaling for the PDE
             self.num_capillary_tubes = 8  # number of capillaries
             self.s = 0.05
             if e is not None:
@@ -380,7 +421,10 @@ class ARF(ModeSolver):
             err_str = 'Fiber \'{:s}\' not implemented.'.format(self.name)
             raise NotImplementedError(err_str)
 
-        self.epw = self.eltsperwave()
+        # NOTE: epw is NOT computed here. eltsperwave() depends on the
+        # *_maxhs mesh-size attributes and on scaling, both of which
+        # ARF.__init__ may still override via **kwargs after set()
+        # returns.
 
     def __str__(self):
         s = 'ARF Physical Parameters:' + \
@@ -422,13 +466,15 @@ class ARF(ModeSolver):
         return s
 
     def eltsperwave(self):
-        epw = {'capillary': 1/self.capillary_maxhs,
-               'air': 1/self.air_maxhs,
-               'inner': 1/self.inner_core_maxhs,
-               'glass': 1/self.glass_maxhs,
-               'outer': 1/self.outer_maxhs}
+        epw = {
+            'capillary': 1 / self.capillary_maxhs,
+            'air': 1 / self.air_maxhs,
+            'inner': 1 / self.inner_core_maxhs,
+            'glass': 1 / self.glass_maxhs,
+            'outer': 1 / self.outer_maxhs
+        }
         for key in epw:
-            epw[key] = epw[key] * self.wavelength*1e6/self.scaling
+            epw[key] = epw[key] * self.wavelength * 1e6 / self.scaling
         return epw
 
     # GEOMETRY ########################################################
@@ -460,8 +506,8 @@ class ARF(ModeSolver):
             if n > nub:
                 # Set a new upper bound on s that uses the maximum lower
                 # bound on the number of capillary tubes.
-                frac = self.Rtos / ((self.Rcs + self.Rtos) *
-                                    np.sin(np.pi / nub))
+                frac = self.Rtos / (
+                    (self.Rcs + self.Rtos) * np.sin(np.pi / nub))
                 new_sub = sub if sub > 0 else 1 - frac
 
                 err_str = 'Specifying {0:d} capillary tube(s) '.format(n) \
@@ -509,20 +555,27 @@ class ARF(ModeSolver):
         bdr = self.boundary
 
         # The outermost circle
-        geo.AddCircle(c=(0, 0), r=self.Rout,
-                      leftdomain=bdr['OuterCircle'][0], rightdomain=0,
+        geo.AddCircle(c=(0, 0),
+                      r=self.Rout,
+                      leftdomain=bdr['OuterCircle'][0],
+                      rightdomain=0,
                       bc='OuterCircle')
 
         # The air-pml interface
-        geo.AddCircle(c=(0, 0), r=self.R,
+        geo.AddCircle(c=(0, 0),
+                      r=self.R,
                       leftdomain=bdr['AirCircle'][0],
-                      rightdomain=bdr['AirCircle'][1], bc='AirCircle')
+                      rightdomain=bdr['AirCircle'][1],
+                      bc='AirCircle')
 
         # The glass sheath
-        geo.AddCircle(c=(0, 0), r=self.Rclado,
+        geo.AddCircle(c=(0, 0),
+                      r=self.Rclado,
                       leftdomain=bdr['OuterClad'][0],
-                      rightdomain=bdr['OuterClad'][1], bc='OuterClad')
-        geo.AddCircle(c=(0, 0), r=self.Rcladi,
+                      rightdomain=bdr['OuterClad'][1],
+                      bc='OuterClad')
+        geo.AddCircle(c=(0, 0),
+                      r=self.Rcladi,
                       leftdomain=bdr['CladInner'][0],
                       rightdomain=bdr['CladInner'][1],
                       bc='CladInner')
@@ -533,34 +586,39 @@ class ARF(ModeSolver):
 
         # Spacing for the angles we need to add the inner circles for the
         # capillaries.
-        theta = np.pi / 2.0 + np.linspace(0, 2*np.pi,
-                                          num=self.num_capillary_tubes,
-                                          endpoint=False)
+        theta = np.pi / 2.0 + np.linspace(
+            0, 2 * np.pi, num=self.num_capillary_tubes, endpoint=False)
 
         # The radial distance to the capillary tube centers.
         dist = (1 - self.s) * (self.Rcs + self.Rtos)
 
         for t in theta:
-            c = (dist*np.cos(t), dist*np.sin(t))
+            c = (dist * np.cos(t), dist * np.sin(t))
 
-            geo.AddCircle(c=c, r=self.Rtis,
+            geo.AddCircle(c=c,
+                          r=self.Rtis,
                           leftdomain=bdr['CapilInner'][0],
                           rightdomain=bdr['CapilInner'][1],
-                          bc='CapilInner', maxh=self.capillary_maxhs)
+                          bc='CapilInner',
+                          maxh=self.capillary_maxhs)
 
-            geo.AddCircle(c=c, r=self.Rtos,
+            geo.AddCircle(c=c,
+                          r=self.Rtos,
                           leftdomain=bdr['CapilOuter'][0],
                           rightdomain=bdr['CapilOuter'][1],
-                          bc='CapilOuter', maxh=self.capillary_maxhs)
+                          bc='CapilOuter',
+                          maxh=self.capillary_maxhs)
 
         # Add the circle for the inner core. Since we are scaling back the
         # (original) distance to the capillary tube centers by (1 - s), we
         # necessarily need to do the same for the inner core region.
         radius = 0.9 * self.Rcs * (1 - self.s)
-        geo.AddCircle(c=(0, 0), r=radius,
+        geo.AddCircle(c=(0, 0),
+                      r=radius,
                       leftdomain=bdr['Inner'][0],
                       rightdomain=bdr['Inner'][1],
-                      bc='Inner', maxh=self.inner_core_maxhs)
+                      bc='Inner',
+                      maxh=self.inner_core_maxhs)
 
         return geo
 
@@ -570,19 +628,25 @@ class ARF(ModeSolver):
         geo = geom2d.SplineGeometry()
 
         # The outermost circle
-        geo.AddCircle(c=(0, 0), r=self.Rout,
-                      leftdomain=bdr['OuterCircle'][0], rightdomain=0,
+        geo.AddCircle(c=(0, 0),
+                      r=self.Rout,
+                      leftdomain=bdr['OuterCircle'][0],
+                      rightdomain=0,
                       bc='OuterCircle')
 
         # The air-pml interface
-        geo.AddCircle(c=(0, 0), r=self.R,
+        geo.AddCircle(c=(0, 0),
+                      r=self.R,
                       leftdomain=bdr['AirCircle'][0],
-                      rightdomain=bdr['AirCircle'][1], bc='AirCircle')
+                      rightdomain=bdr['AirCircle'][1],
+                      bc='AirCircle')
 
         # Cladding begins here
-        geo.AddCircle(c=(0, 0), r=self.Rclado,
+        geo.AddCircle(c=(0, 0),
+                      r=self.Rclado,
                       leftdomain=bdr['OuterClad'][0],
-                      rightdomain=bdr['OuterClad'][1], bc='OuterClad')
+                      rightdomain=bdr['OuterClad'][1],
+                      bc='OuterClad')
 
         # Inner portion:
 
@@ -636,19 +700,15 @@ class ARF(ModeSolver):
 
         # Add the capillary points to the geometry
         capnums = [geo.AppendPoint(x, y) for x, y in capillary_points]
-        NP = len(capillary_points)    # number of capillary point IDs.
+        NP = len(capillary_points)  # number of capillary point IDs.
         for k in range(1, NP + 1, 2):  # add the splines.
-            geo.Append(
-                [
-                    'spline3',
-                    capnums[k % NP],
-                    capnums[(k + 1) % NP],
-                    capnums[(k + 2) % NP]
-                ],
+            geo.Append([
+                'spline3', capnums[k % NP], capnums[(k + 1) % NP],
+                capnums[(k + 2) % NP]
+            ],
                 leftdomain=bdr['CapilOuterCladInner'][0],
                 rightdomain=bdr['CapilOuterCladInner'][1],
-                bc='CapilOuterCladInner'
-            )
+                bc='CapilOuterCladInner')
 
         # --------------------------------------------------------------------
         # Add capillary tubes.
@@ -656,27 +716,30 @@ class ARF(ModeSolver):
 
         # Spacing for the angles we need to add the inner circles for the
         # capillaries.
-        theta = np.pi / 2.0 + np.linspace(0, 2*np.pi,
-                                          num=self.num_capillary_tubes,
-                                          endpoint=False)
+        theta = np.pi / 2.0 + np.linspace(
+            0, 2 * np.pi, num=self.num_capillary_tubes, endpoint=False)
 
         # The radial distance to the capillary tube centers.
         dist = self.Rcs + self.Rtos
 
         for t in theta:
-            c = (dist*np.cos(t), dist*np.sin(t))
+            c = (dist * np.cos(t), dist * np.sin(t))
 
-            geo.AddCircle(c=c, r=self.Rtis,
+            geo.AddCircle(c=c,
+                          r=self.Rtis,
                           leftdomain=bdr['CapilInner'][0],
                           rightdomain=bdr['CapilInner'][1],
-                          bc='CapilInner', maxh=self.capillary_maxhs)
+                          bc='CapilInner',
+                          maxh=self.capillary_maxhs)
 
         # Add the circle for the inner core.
         radius = 0.75 * self.Rcs
-        geo.AddCircle(c=(0, 0), r=radius,
+        geo.AddCircle(c=(0, 0),
+                      r=radius,
                       leftdomain=bdr['Inner'][0],
                       rightdomain=bdr['Inner'][1],
-                      bc='Inner', maxh=self.inner_core_maxhs)
+                      bc='Inner',
+                      maxh=self.inner_core_maxhs)
 
         return geo
 
@@ -733,12 +796,9 @@ class ARF(ModeSolver):
 
         # The rotation matrix needed to generate the spline points for an
         # arbitrary capillary tube.
-        R = np.array(
-            [
-                [np.cos(rotation_angle), -np.sin(rotation_angle)],
-                [np.sin(rotation_angle), np.cos(rotation_angle)]
-            ]
-        )
+        R = np.array([[np.cos(rotation_angle), -np.sin(rotation_angle)],
+                      [np.sin(rotation_angle),
+                       np.cos(rotation_angle)]])
 
         # Rotate, scale, and shift the points.
         points *= self.Rtos
@@ -766,7 +826,7 @@ class ARF(ModeSolver):
             self.mesh = ng.Mesh(self.mesh.ngmesh.Copy())
         self.curve(curve)
         for key in self.epw:
-            self.epw[key] = self.epw[key] * (2 ** n)
+            self.epw[key] = self.epw[key] * (2**n)
         s = '  Elements/wavelength revised:'
         s += '%g (capillary), %g (air), %g (inner core)' \
             % (self.epw['capillary'], self.epw['air'], self.epw['inner'])
@@ -777,4 +837,3 @@ class ARF(ModeSolver):
     def curve(self, curve=3):
         self.mesh.Curve(curve)
         self.curveorder = curve
-
