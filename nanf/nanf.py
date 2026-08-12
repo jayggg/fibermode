@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Fri May 20 20:04:04 2022
-
-@author: pv
-"""
-
 import ngsolve as ng
 import numpy as np
 from netgen.geom2d import SplineGeometry
@@ -18,44 +10,158 @@ class NANF(ModeSolver):
     Create Nested Antiresonant Nodeless Fiber.
     """
 
-    def __init__(self, r_core=15e-6,
-                 capillary_info=[
-                     {'N': 6, 'r': 12.48e-6, 't': .42e-6, 'e': 1},
-                     {'N': 1, 'r': 6e-6, 't': .42e-6, 'e': 1},
-                     # {'N': 1, 'r': 3e-6, 't': .42e-6, 'e': 1},
-                 ],
-                 scale=15e-6,
-                 t_cladding=10e-6,
-                 t_buffer=15e-6,
-                 t_outer=20e-6,
-                 glass_maxh=.06,
-                 air_maxh=.1,
-                 core_maxh=.08,
-                 buffer_maxh=.2,
-                 pml_maxh=.1,
-                 wl=1.8e-6,
-                 refine=0,
-                 curve=3,
-                 poly_core=True,
-                 core_factor=.8,
-                 outer_materials=None,
-                 ):
+    def __init__(
+        self,
+        r_core=15e-6,
+        capillary_info=[
+            {
+                'N': 6,
+                'r': 12.48e-6,
+                't': .42e-6,
+                'e': 1
+            },
+            {
+                'N': 1,
+                'r': 6e-6,
+                't': .42e-6,
+                'e': 1
+            },
+            # {'N': 1, 'r': 3e-6, 't': .42e-6, 'e': 1},
+        ],
+        scale=15e-6,
+        t_cladding=10e-6,
+        t_buffer=15e-6,
+        t_outer=20e-6,
+        glass_maxh=.06,
+        air_maxh=.1,
+        core_maxh=.08,
+        buffer_maxh=.5,
+        pml_maxh=4,
+        wl=1.8e-6,
+        refine=0,
+        curve=3,
+        poly_core=True,
+        core_factor=.8,
+        outer_materials=None,
+    ):
+        """
+        Construct a Nested Antiresonant Nodeless Fiber (NANF).
+
+        GEOMETRY: concentric regions, from the center outward:
+
+           core: the hollow center where the mode is guided -- a
+                regular polygon of R_core_comp = core_factor * R_core
+                "radius" if poly_core else a circle of that radius.
+
+           air: ALL remaining open space enclosed by the outermost
+                cladding boundary that is not core or glass:  the
+                gaps between the core and the first ring of capillary
+                tubes, the gaps between nested rings of tubes, AND the
+                hollow interior of every capillary tube (including the
+                innermost, smallest nested tube). Unlike ARF class, NANF
+                does NOT distinguish tube-enclosed air from
+                between-tube fill air. There is only one 'air'
+                material/mesh-size for all of it.
+
+           glass: every capillary tube wall, at every nesting level,
+                plus the solid outer cladding jacket of thickness
+                t_cladding (all one material/mesh-size, despite
+                being geometrically several disconnected annuli).
+
+           buffer: solid material of thickness t_buffer just outside
+                the cladding (air by default; index n_buffer).
+
+           Outer: the outermost layer, of thickness t_outer. This is
+                the PML region (ModeSolver requires a region literally
+                named 'Outer' for this purpose).
+
+           The last two layers come from self.outer_materials (a list
+                of {'material', 'n', 'T', 'maxh'} dicts, buffer then
+                Outer by default); passing your own outer_materials
+                replaces both and can add further layers between them.
+
+        PARAMETERS:
+
+           r_core: physical core radius, in meters (default 15e-6).
+
+           capillary_info: list of dicts, one per ring of capillary
+                tubes surrounding the core, ordered from the ring
+                closest to the core outward. Each dict may give:
+                   'N': number of tubes in that ring
+                   'r': physical tube radius, in meters
+                   't': physical tube wall thickness, in meters
+                   'e': embedding fraction in (0, 1], following ARF's
+                        convention (1 = tube tangent to its enclosing
+                        boundary; smaller values embed it further).
+                The default gives the two-ring "nested" structure
+                (6 large tubes plus 1 small nested tube) that gives
+                NANF its name.
+
+           scale: length scale, in meters, used to nondimensionalize
+                the eigenproblem (default 15e-6, the default core
+                radius).
+
+           t_cladding: physical thickness of the glass jacket
+                surrounding the outermost capillary ring, in meters.
+
+           t_buffer: physical thickness of the buffer region, in
+                meters (see GEOMETRY).
+
+           t_outer: physical thickness of the outer PML region, in
+                meters (see GEOMETRY).
+
+           glass_maxh, air_maxh, core_maxh: nondimensional maximum
+                mesh element size (NGSolve maxh) in the glass, air,
+                and core regions respectively, as described above
+                under GEOMETRY.
+
+           buffer_maxh, pml_maxh: nondimensional maxh in the buffer
+                and Outer/PML regions respectively (defaults are 0.5 and
+                4, quite coarse, since these regions don't need fine
+                resolution). These only take effect when
+                outer_materials is left at its default (None); if you
+                pass your own outer_materials, set 'maxh' directly in
+                each of its dicts instead.
+
+           wl: vacuum wavelength, in meters (default 1.8e-6).
+
+           refine: number of uniform mesh refinements applied after
+                initial mesh generation (default 0).
+
+           curve: order of the curved-element geometry approximation
+                (default 3).
+
+           poly_core: if True (default), approximate the core boundary
+                with a polygonal/spline curve; see create_geometry.
+                Ignored (treated as False) when a capillary ring has
+                2 or fewer tubes.
+
+           core_factor: fraction of R_core used as the computational
+                core radius R_core_comp (default 0.8).
+
+           outer_materials: optional list of dicts overriding the
+                default buffer/outer material layers, each with keys
+                'material', 'n', 'T', 'maxh'. If None (default), a
+                two-layer air buffer + air outer region is used, and
+                n0 (the exterior refractive index ModeSolver needs)
+                is taken from the last layer's 'n'.
+        """
 
         self.scale = scale
         self.R_core = r_core / scale
         self.R_core_comp = core_factor * self.R_core
 
         self.Rs = [0]
-        self.Ts = [t_cladding/scale]
+        self.Ts = [t_cladding / scale]
         self.Ns = [0]
         self.es = [0]
 
         for i, D in enumerate(capillary_info):
             for key, value in D.items():
                 if key == 'r':
-                    self.Rs.append(value/scale)
+                    self.Rs.append(value / scale)
                 elif key == 't':
-                    self.Ts.append(value/scale)
+                    self.Ts.append(value / scale)
                 elif key == 'N':
                     self.Ns.append(value)
                 elif key == 'e':
@@ -63,7 +169,8 @@ class NANF(ModeSolver):
                 else:
                     raise ValueError('Key not recognized.')
 
-        self.Rs[0] = self.R_core + 2 * self.Rs[1] + (2 - self.es[1])*self.Ts[1]
+        self.Rs[0] = self.R_core + 2 * self.Rs[1] + (2 -
+                                                     self.es[1]) * self.Ts[1]
         self.Cs = [0] * len(self.Ts)
 
         for i in range(len(self.Ts) - 1):
@@ -81,12 +188,12 @@ class NANF(ModeSolver):
                     (self.Rs[i+1] + self.Ts[i+1])**2) / \
                 (2 * (self.Cs[i+1] - self.Cs[i]) * self.Rs[i])
 
-            self.phis[i+1] = np.arccos(frac)
+            self.phis[i + 1] = np.arccos(frac)
 
             frac = self.Rs[i] * np.sin(self.phis[i+1]) / \
                 (self.Rs[i+1] + self.Ts[i+1])
 
-            self.psis[i+1] = np.arccos(frac)
+            self.psis[i + 1] = np.arccos(frac)
 
         self.T_outer = t_outer / scale
         self.T_buffer = t_buffer / scale
@@ -108,17 +215,17 @@ class NANF(ModeSolver):
             self.outer_materials = outer_materials
             self.n0 = outer_materials[-1]['n']  # Need to reset n0
         else:
-            self.outer_materials = [
-                {'material': 'buffer',
-                 'n': self.n_buffer,
-                 'T': self.T_buffer,
-                 'maxh': .5},
-
-                {'material': 'Outer',
-                 'n': self.n0,
-                 'T': self.T_outer,
-                 'maxh': 4}
-            ]
+            self.outer_materials = [{
+                'material': 'buffer',
+                'n': self.n_buffer,
+                'T': self.T_buffer,
+                'maxh': buffer_maxh
+            }, {
+                'material': 'Outer',
+                'n': self.n0,
+                'T': self.T_outer,
+                'maxh': pml_maxh
+            }]
 
         # Create geometry
         self.create_geometry(poly_core=poly_core)
@@ -135,11 +242,12 @@ class NANF(ModeSolver):
         Create NANF from dictionary.
         """
         new_dict = {}
-        list_of_keys = ['r_core', 'capillary_info', 'scale', 't_cladding',
-                        't_buffer', 't_outer', 'glass_maxh', 'air _maxh',
-                        'core_maxh', 'buffer_maxh', 'pml_maxh', 'wl',
-                        'refine', 'curve', 'poly_core', 'core_factor',
-                        'outer_materials']
+        list_of_keys = [
+            'r_core', 'capillary_info', 'scale', 't_cladding', 't_buffer',
+            't_outer', 'glass_maxh', 'air _maxh', 'core_maxh', 'buffer_maxh',
+            'pml_maxh', 'wl', 'refine', 'curve', 'poly_core', 'core_factor',
+            'outer_materials'
+        ]
         for key in list_of_keys:
             if key in d:
                 new_dict[key] = d[key]
@@ -169,7 +277,7 @@ overlap each other.' % (i))
 
         def maxlength(pts):
             L = np.linalg.norm(
-                [pts[1]-pts[0], pts[2] - pts[1], pts[0] - pts[2]], axis=1)
+                [pts[1] - pts[0], pts[2] - pts[1], pts[0] - pts[2]], axis=1)
             return np.max(L)
 
         if material is not None:
@@ -177,8 +285,11 @@ overlap each other.' % (i))
         else:
             elts = [v for v in self.mesh.Elements()]
 
-        diams = [maxlength([np.array(self.mesh[el.vertices[i]].point)
-                           for i in range(3)]) for el in elts]
+        diams = [
+            maxlength(
+                [np.array(self.mesh[el.vertices[i]].point) for i in range(3)])
+            for el in elts
+        ]
 
         return max(diams)
 
@@ -201,10 +312,11 @@ overlap each other.' % (i))
         self.k = 2 * np.pi / self.wavelength
 
         # Set up inner region refractive indices
-        refractive_index_dict = {'core': self.n_air,
-                                 'air': self.n_air,
-                                 'glass': self.n_glass,
-                                 }
+        refractive_index_dict = {
+            'core': self.n_air,
+            'air': self.n_air,
+            'glass': self.n_glass,
+        }
 
         # Add outer material refractive indices
         for i, d in enumerate(self.outer_materials):
@@ -213,7 +325,7 @@ overlap each other.' % (i))
         self.refractive_index_dict = refractive_index_dict
         self.index = self.mesh.RegionCF(ng.VOL, refractive_index_dict)
 
-        self.V = (self.scale * self.k)**2 * (self.n0 ** 2 - self.index ** 2)
+        self.V = (self.scale * self.k)**2 * (self.n0**2 - self.index**2)
 
     def create_mesh(self, refine=0, curve=3):
         """
@@ -229,6 +341,7 @@ overlap each other.' % (i))
         self.mesh.ngmesh.SetGeometry(self.geo)
         self.mesh = ng.Mesh(self.mesh.ngmesh.Copy())
         self.mesh.Curve(curve)
+        self.curveorder = curve
 
     def create_geometry(self, poly_core=True):
 
@@ -246,28 +359,38 @@ overlap each other.' % (i))
 
             R_poly = self.R_core_comp / np.cos(np.pi / N)
 
-            core_points = [(-R_poly * np.sin((2 * i - 1) * np.pi / N),
-                            R_poly * np.cos((2 * i - 1) * np.pi / N))
-                           for i in range(N)]
+            core_points = [(-R_poly * np.sin(
+                (2 * i - 1) * np.pi / N), R_poly * np.cos(
+                    (2 * i - 1) * np.pi / N)) for i in range(N)]
 
             pts = [geo.AppendPoint(x, y) for x, y in core_points]
 
             for i in range(N - 1):
-                geo.Append(["line", pts[i], pts[i+1]], leftdomain=1,
-                           rightdomain=2, bc='core_fill_air_interface')
+                geo.Append(["line", pts[i], pts[i + 1]],
+                           leftdomain=1,
+                           rightdomain=2,
+                           bc='core_fill_air_interface')
 
-            geo.Append(["line", pts[-1], pts[0]], leftdomain=1,
-                       rightdomain=2, bc='core_fill_air_interface')
+            geo.Append(["line", pts[-1], pts[0]],
+                       leftdomain=1,
+                       rightdomain=2,
+                       bc='core_fill_air_interface')
 
         else:
-            geo.AddCircle(c=(0, 0), r=self.R_core_comp, leftdomain=1,
-                          rightdomain=2, bc='core_fill_air_interface')
+            geo.AddCircle(c=(0, 0),
+                          r=self.R_core_comp,
+                          leftdomain=1,
+                          rightdomain=2,
+                          bc='core_fill_air_interface')
 
         # Now we add the microtubes and cladding
 
         if N == 0:
-            geo.AddCircle(c=(0, 0), r=self.Rs[0], leftdomain=2,
-                          rightdomain=3, bc='fill_air_cladding_interface')
+            geo.AddCircle(c=(0, 0),
+                          r=self.Rs[0],
+                          leftdomain=2,
+                          rightdomain=3,
+                          bc='fill_air_cladding_interface')
         else:
 
             # Recursively build microstructure
@@ -275,17 +398,25 @@ overlap each other.' % (i))
 
         self.Rout = self.Rs[0] + self.Ts[0]  # set base Rout
 
-        geo.AddCircle(c=(0, 0), r=self.Rout, leftdomain=3,
+        geo.AddCircle(c=(0, 0),
+                      r=self.Rout,
+                      leftdomain=3,
                       rightdomain=4,
                       bc='cladding_outer_materials_interface')
 
         self.inner_materials = {
-            'core': {'index': 1,
-                     'maxh': self.core_maxh},
-            'air': {'index': 2,
-                    'maxh': self.air_maxh},
-            'glass': {'index': 3,
-                      'maxh': self.glass_maxh}
+            'core': {
+                'index': 1,
+                'maxh': self.core_maxh
+            },
+            'air': {
+                'index': 2,
+                'maxh': self.air_maxh
+            },
+            'glass': {
+                'index': 3,
+                'maxh': self.glass_maxh
+            }
         }
 
         # Set inner material names and maxhs
@@ -300,19 +431,22 @@ overlap each other.' % (i))
             self.Rout += d['T']  # add thickness of materials
 
             # Take care of boundary naming
-            if i < (n_outer-1):
+            if i < (n_outer - 1):
                 mat = d['material']
-                next_mat = self.outer_materials[i+1]['material']
+                next_mat = self.outer_materials[i + 1]['material']
                 bc = mat + '_' + next_mat + '_interface'
-                geo.AddCircle(c=(0, 0), r=self.Rout, leftdomain=(i+4),
-                              rightdomain=(i+5), bc=bc)
-                geo.SetMaterial(i+4, d['material'])
-                geo.SetDomainMaxH(i+4, d['maxh'])
+                geo.AddCircle(c=(0, 0),
+                              r=self.Rout,
+                              leftdomain=(i + 4),
+                              rightdomain=(i + 5),
+                              bc=bc)
+                geo.SetMaterial(i + 4, d['material'])
+                geo.SetDomainMaxH(i + 4, d['maxh'])
             else:
                 bc = 'OuterCircle'
-                geo.AddCircle(c=(0, 0), r=self.Rout, leftdomain=(i+4), bc=bc)
-                geo.SetMaterial(i+4, d['material'])
-                geo.SetDomainMaxH(i+4, d['maxh'])
+                geo.AddCircle(c=(0, 0), r=self.Rout, leftdomain=(i + 4), bc=bc)
+                geo.SetMaterial(i + 4, d['material'])
+                geo.SetDomainMaxH(i + 4, d['maxh'])
 
         self.R = self.Rout - self.outer_materials[-1]['T']
         self.geo = geo
@@ -340,37 +474,39 @@ overlap each other.' % (i))
 
         if i == len(self.Ns) - 1:
             # We are at base level, add just a circle.
-            geo.AddCircle(c=total_center, r=self.Rs[i], leftdomain=2,
-                          rightdomain=3, bc='air_glass_interface')
+            geo.AddCircle(c=total_center,
+                          r=self.Rs[i],
+                          leftdomain=2,
+                          rightdomain=3,
+                          bc='air_glass_interface')
             return
 
         else:
             # Build interface between current air level and next level
             # of capillaries.
-            self.build_outer(geo, self.Cs[i+1]-self.Cs[i], self.Ns[i+1],
-                             self.Rs[i+1]+self.Ts[i+1], self.Rs[i],
-                             self.phis[i+1], self.psis[i+1],
-                             total_center, total_rotation)
+            self.build_outer(geo, self.Cs[i + 1] - self.Cs[i], self.Ns[i + 1],
+                             self.Rs[i + 1] + self.Ts[i + 1], self.Rs[i],
+                             self.phis[i + 1], self.psis[i + 1], total_center,
+                             total_rotation)
 
-            for k in range(self.Ns[i+1]):
+            for k in range(self.Ns[i + 1]):
                 # Now go into each capillary and repeat the process
                 # at the correct new center point and rotation.
-                new_point = np.array([(self.Cs[i+1] - self.Cs[i]) *
-                                      np.cos(total_rotation + np.pi/2),
-                                      (self.Cs[i+1] - self.Cs[i]) *
-                                      np.sin(total_rotation + np.pi/2)
-                                      ])
+                new_point = np.array([(self.Cs[i + 1] - self.Cs[i]) *
+                                      np.cos(total_rotation + np.pi / 2),
+                                      (self.Cs[i + 1] - self.Cs[i]) *
+                                      np.sin(total_rotation + np.pi / 2)])
                 # Don't update the total_center, just pass current
                 # total_center plus new_point.
-                self.make_layer(geo, i+1, total_center+new_point,
+                self.make_layer(geo, i + 1, total_center + new_point,
                                 total_rotation)
 
                 # Update amount to rotate next level of geometry.
-                total_rotation += 2*np.pi/self.Ns[i+1]
+                total_rotation += 2 * np.pi / self.Ns[i + 1]
 
-    def build_outer(self, geo, north_pole_distance,
-                    N_tubes_inner, R_inner_cap_total, R_outer, phi, psi,
-                    total_center, total_rotation):
+    def build_outer(self, geo, north_pole_distance, N_tubes_inner,
+                    R_inner_cap_total, R_outer, phi, psi, total_center,
+                    total_rotation):
         '''
         Build interface between air layer inside of one tube and capillary
         microstructures of next nested layer.
@@ -415,20 +551,17 @@ overlap each other.' % (i))
 
             inner_rotation = 0
             points = []
-            points.append([R_outer,
-                           R_outer * (1 - np.sin(phi)) / np.cos(phi)])
+            points.append([R_outer, R_outer * (1 - np.sin(phi)) / np.cos(phi)])
 
-            points.extend(self.get_capillary_spline_points(north_pole,
-                                                           R_inner_cap_total,
-                                                           phi, psi,
-                                                           inner_rotation))
+            points.extend(
+                self.get_capillary_spline_points(north_pole, R_inner_cap_total,
+                                                 phi, psi, inner_rotation))
 
-            points.append([-R_outer,
-                           R_outer * (1 - np.sin(phi)) / np.cos(phi)])
+            points.append(
+                [-R_outer, R_outer * (1 - np.sin(phi)) / np.cos(phi)])
 
-            points.extend([[-R_outer, 0], [-R_outer, -R_outer],
-                          [0, -R_outer], [R_outer, -R_outer],
-                          [R_outer, 0]])
+            points.extend([[-R_outer, 0], [-R_outer, -R_outer], [0, -R_outer],
+                           [R_outer, -R_outer], [R_outer, 0]])
 
         else:
 
@@ -451,18 +584,21 @@ overlap each other.' % (i))
                 ctrl_pt_angle = np.pi / 2 - phi - sigma / 2 \
                     + inner_rotation
 
-                points.append([D * np.cos(ctrl_pt_angle),
-                              D * np.sin(ctrl_pt_angle)])
+                points.append(
+                    [D * np.cos(ctrl_pt_angle), D * np.sin(ctrl_pt_angle)])
 
                 # Obtain the control points for the capillary tube
                 # immediately counterclockwise from the above control point
-                points.extend(self.get_capillary_spline_points(
-                    north_pole, R_inner_cap_total, phi, psi, inner_rotation))
+                points.extend(
+                    self.get_capillary_spline_points(north_pole,
+                                                     R_inner_cap_total, phi,
+                                                     psi, inner_rotation))
 
         # Rotate and shift points to desired center
         points = np.array(points)
         M = np.array([[np.cos(total_rotation), -np.sin(total_rotation)],
-                      [np.sin(total_rotation), np.cos(total_rotation)]])
+                      [np.sin(total_rotation),
+                       np.cos(total_rotation)]])
 
         points = (M @ points.T).T
 
@@ -475,16 +611,16 @@ overlap each other.' % (i))
 
         for k in range(1, NP + 1, 2):
             bc = 'air_capillary_interface'
-            geo.Append(
-                ['spline3',
-                    point_ids[k % NP],
-                    point_ids[(k + 1) % NP],
-                    point_ids[(k + 2) % NP]
-                 ], leftdomain=2, rightdomain=3,
+            geo.Append([
+                'spline3', point_ids[k % NP], point_ids[(k + 1) % NP],
+                point_ids[(k + 2) % NP]
+            ],
+                leftdomain=2,
+                rightdomain=3,
                 bc=bc)
 
-    def get_capillary_spline_points(self, north_pole, r_cap_total,
-                                    phi, psi, inner_rotation):
+    def get_capillary_spline_points(self, north_pole, r_cap_total, phi, psi,
+                                    inner_rotation):
         """
         Method that obtains the spline points for the interface between one
         capillary tube and inner hollow core. By default, we generate the
@@ -537,7 +673,8 @@ overlap each other.' % (i))
         # arbitrary capillary tube.
         # print('rotating inner capillary by ', inner_rotation)
         M = np.array([[np.cos(inner_rotation), -np.sin(inner_rotation)],
-                      [np.sin(inner_rotation), np.cos(inner_rotation)]])
+                      [np.sin(inner_rotation),
+                       np.cos(inner_rotation)]])
 
         # Rotate, scale, and shift the points.
         points *= r_cap_total
@@ -556,8 +693,11 @@ overlap each other.' % (i))
         """Create NGvec object containing modes and set data given by array."""
         if mesh is None:
             mesh = self.mesh
-        X = ng.HCurl(mesh, order=p+1-max(1-p, 0), type1=True,
-                     dirichlet='OuterCircle', complex=True)
+        X = ng.HCurl(mesh,
+                     order=p + 1 - max(1 - p, 0),
+                     type1=True,
+                     dirichlet='OuterCircle',
+                     complex=True)
         m = array.shape[1]
         E = NGvecs(X, m)
         try:
@@ -572,7 +712,7 @@ ing to array has been passed as keyword p.")
         """Create NGvec object containing modes and set data given by array."""
         if mesh is None:
             mesh = self.mesh
-        Y = ng.H1(mesh, order=p+1, dirichlet='OuterCircle', complex=True)
+        Y = ng.H1(mesh, order=p + 1, dirichlet='OuterCircle', complex=True)
         m = array.shape[1]
         phi = NGvecs(Y, m)
         try:
@@ -582,40 +722,3 @@ ing to array has been passed as keyword p.")
  constructed the same as for input array and that polynomial degree correspond\
 ing to array has been passed as keyword p.")
         return phi
-
-    # SAVE & LOAD #####################################################
-
-    def save_mesh(self, name):
-        """ Save mesh using pickle (allows for mesh curvature). """
-        if name[-4:] != '.pkl':
-            name += '.pkl'
-        with open(name, 'wb') as f:
-            pickle.dump(self.mesh, f)
-
-    def save_modes(self, modes, name):
-        """Save modes as numpy arrays."""
-        if name[-4:] == '.npy':
-            name -= '.npy'
-        np.save(name, modes.tonumpy())
-
-    def load_mesh(self, name):
-        """ Load a saved ARF mesh."""
-        if name[-4:] != '.pkl':
-            name += '.pkl'
-        with open(name, 'rb') as f:
-            pmesh = pickle.load(f)
-        return pmesh
-
-    def load_E_modes(self, mesh_name, mode_name, p=8):
-        """Load transverse vectore E modes and associated mesh"""
-        mesh = self.load_mesh(mesh_name)
-        if mode_name[-4:] == '.npy':
-            mode_name -= '.npy'
-        array = np.load(mode_name+'.npy')
-        return self.E_modes_from_array(array, mesh=mesh, p=p)
-
-    def load_phi_modes(self, mesh_name, mode_name, p=8):
-        """Load transverse vectore E modes and associated mesh"""
-        mesh = self.load_mesh(mesh_name)
-        array = np.load(mode_name+'.npy')
-        return self.phi_modes_from_array(array, mesh=mesh, p=p)
