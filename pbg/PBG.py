@@ -6,13 +6,16 @@ from pyeigfeast.spectralproj.ngs import NGvecs
 
 
 class PBG(ModeSolver):
-    """Create a Photonic Band Gap (PBG) fiber object,
-    aka Photonic Crystal Fibers (PCFs).
+    """Create a Photonic Band Gap (PBG) fiber object from a parameter
+    dictionary describing a lattice-microstructured cladding.
 
-    These types of fibers have a lattice like microstructure that can
-    allow modes to be carried in a lower index core region.  The PBG
-    object can then be used to find the modes of the associated fiber
-    using methods from the parent class ModeSolver.
+    The lattice can confine modes to a lower-index core region via a
+    photonic bandgap effect (see fiber_dicts.rod, lyr6cr2), or, with
+    a different index arrangement, via ordinary index guiding instead
+    (fiber_dicts.holey; see demos/pbg/holey_demo.py). Either way, the
+    PBG object, which may represent a PBG or a PCF fiber, can then be
+    used to find modes of the associated fiber using methods from
+    the parent class ModeSolver.
 
     GEOMETRY: concentric regions, from the center outward (material
     name in create_mesh(), and the fiber_param_dict key controlling
@@ -156,18 +159,10 @@ class PBG(ModeSolver):
         self.Rout = self.r_out / self.scale  # end of PML and geometry
 
         # Create geometry
-        self.geo = self.geometry(self.Λ,
-                                 self.r_tube,
-                                 self.r_fiber,
-                                 self.r_poly,
-                                 self.r_pml,
-                                 self.r_out,
-                                 self.scale,
-                                 self.r_core,
-                                 self.layers,
-                                 self.skip,
-                                 self.p,
-                                 self.pattern)
+        self.geo = self.geometry(self.Λ, self.r_tube, self.r_fiber,
+                                 self.r_poly, self.r_pml, self.r_out,
+                                 self.scale, self.r_core, self.layers,
+                                 self.skip, self.p, self.pattern)
 
         # Create Mesh
         self.refinements = 0
@@ -290,18 +285,10 @@ class PBG(ModeSolver):
 
     def reset_mesh(self):
         """Reset to original mesh."""
-        self.geo = self.geometry(self.Λ,
-                                 self.r_tube,
-                                 self.r_fiber,
-                                 self.r_poly,
-                                 self.r_pml,
-                                 self.r_out,
-                                 self.scale,
-                                 self.r_core,
-                                 self.layers,
-                                 self.skip,
-                                 self.p,
-                                 self.pattern)
+        self.geo = self.geometry(self.Λ, self.r_tube, self.r_fiber,
+                                 self.r_poly, self.r_pml, self.r_out,
+                                 self.scale, self.r_core, self.layers,
+                                 self.skip, self.p, self.pattern)
 
         self.create_mesh(ref=0, curve=3)
 
@@ -443,10 +430,7 @@ class PBG(ModeSolver):
                           leftdomain=2,
                           rightdomain=5,
                           bc='fiber_pml_interface')
-            geo.AddCircle(c=(0, 0),
-                          r=R_out,
-                          leftdomain=5,
-                          bc="OuterCircle")
+            geo.AddCircle(c=(0, 0), r=R_out, leftdomain=5, bc="OuterCircle")
 
         else:  # one or both exist
             if R_fiber == R_poly:  # No polymer layer, but yes buffer
