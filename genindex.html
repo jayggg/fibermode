@@ -31,7 +31,7 @@
     <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=eba8b062" />
     <link rel="stylesheet" type="text/css" href="_static/togglebutton.css?v=13237357" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
-    <link rel="stylesheet" type="text/css" href="_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css?v=6644e6bb" />
     <link rel="stylesheet" type="text/css" href="_static/sphinx-thebe.css?v=4fa983c6" />
     <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
   
@@ -193,6 +193,12 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="3_arf.html">3. Antiresonant Fibers</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="3_1_arf.html">3.1. Modes of antiresonant fibers</a></li>
 <li class="toctree-l2"><a class="reference internal" href="3_2_nanf.html">3.2. Nested antiresonant nodeless fibers (NANF)</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="4_pbg.html">4. Photonic Bandgap Fibers</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="4_1_pbg.html">4.1. Modes of photonic bandgap fibers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="4_2_pbg_rod.html">4.2. All-Solid Rod-Lattice PBG Fiber</a></li>
+<li class="toctree-l2"><a class="reference internal" href="4_3_pbg_air.html">4.3. PBG Fiber with an Air-Clad Outer Boundary</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Index</a></li>
@@ -378,6 +384,8 @@ document.write(`
         <li><a href="3_1_arf.html#index-2">keyword arguments</a>
 </li>
       </ul></li>
+      <li><a href="4_2_pbg_rod.html#index-1">ARROW guidance</a>
+</li>
       <li><a href="1_4_stepindex_vector.html#index-15">azimuthal mode number</a>, <a href="2_1_bragg_exact.html#index-12">[1]</a>
 </li>
   </ul></td>
@@ -446,6 +454,13 @@ document.write(`
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="1_1_stepindex_exact.html#index-3">characteristic equation for X</a>
 </li>
+      <li>
+    custom parameters
+
+      <ul>
+        <li><a href="4_3_pbg_air.html#index-1">override fiber_dicts</a>
+</li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
@@ -488,6 +503,13 @@ document.write(`
         <li><a href="1_4_stepindex_vector.html#index-8">vector</a>
 </li>
       </ul></li>
+      <li>
+    eigenvalue search
+
+      <ul>
+        <li><a href="4_1_pbg.html#index-10">FEAST</a>
+</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li>
@@ -514,6 +536,13 @@ document.write(`
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="1_2_stepindex.html#index-5">FEAST algorithm</a>
 </li>
+      <li>
+    fiber_dicts
+
+      <ul>
+        <li><a href="4_3_pbg_air.html#index-2">override</a>
+</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li>
@@ -570,6 +599,8 @@ document.write(`
         <li><a href="2_1_bragg_exact.html#index-5">scalar</a>
 </li>
       </ul></li>
+      <li><a href="4_3_pbg_air.html#index-5">holey fiber</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -604,6 +635,8 @@ document.write(`
         <li><a href="3_1_arf.html#index-3">ARF</a>
 </li>
         <li><a href="2_2_bragg.html#index-1">method</a>
+</li>
+        <li><a href="4_1_pbg.html#index-8">PBG</a>
 </li>
         <li><a href="2_2_bragg.html#index-9">scalar</a>
 </li>
@@ -698,12 +731,21 @@ document.write(`
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="3_2_nanf.html#index-0">NANF</a>
 </li>
+      <li>
+    near-degenerate
+
+      <ul>
+        <li><a href="4_2_pbg_rod.html#index-3">adjusting eta_tol</a>
+</li>
+        <li><a href="4_2_pbg_rod.html#index-2">eigenvectors</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="3_2_nanf.html#index-1">nested antiresonant fiber</a>
 </li>
       <li><a href="1_1_stepindex_exact.html#index-2">nondimensional root</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     nondimensionalization
 
@@ -732,10 +774,44 @@ document.write(`
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li>
+    pattern
+
+      <ul>
+        <li><a href="4_1_pbg.html#index-11">custom PBG</a>
+</li>
+      </ul></li>
+      <li><a href="4_1_pbg.html#index-1">PBG</a>
+
+      <ul>
+        <li><a href="4_3_pbg_air.html#index-0">air outer region</a>
+</li>
+        <li><a href="4_1_pbg.html#index-12">custom pattern</a>
+</li>
+        <li><a href="4_2_pbg_rod.html#index-0">rod lattice</a>
+</li>
+        <li><a href="4_1_pbg.html#index-4">vs PCF</a>
+</li>
+      </ul></li>
+      <li><a href="4_1_pbg.html#index-3">PCF</a>
+
+      <ul>
+        <li><a href="4_3_pbg_air.html#index-6">index-guided example</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
     perfectly matched layer
 
       <ul>
         <li><a href="2_2_bragg.html#index-4">frequency-dependent</a>
+</li>
+      </ul></li>
+      <li>
+    perturbation
+
+      <ul>
+        <li><a href="4_1_pbg.html#index-6">index</a>
 </li>
       </ul></li>
       <li>
@@ -745,8 +821,10 @@ document.write(`
         <li><a href="1_4_stepindex_vector.html#index-10">scaled longitudinal component</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="4_1_pbg.html#index-0">photonic bandgap fiber</a>
+</li>
+      <li><a href="4_1_pbg.html#index-2">photonic crystal fiber</a>
+</li>
       <li>
     PML
 
@@ -763,6 +841,15 @@ document.write(`
       <li><a href="2_3_bragg_adaptivity.html#index-10">ripples</a>
 </li>
   </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    rotate
+
+      <ul>
+        <li><a href="4_1_pbg.html#index-7">PBG fiber</a>
+</li>
+      </ul></li>
+  </ul></td>
 </tr></table>
 
 <h2 id="S">S</h2>
@@ -775,10 +862,26 @@ document.write(`
         <li><a href="2_2_bragg.html#index-8">Bragg fiber</a>
 </li>
       </ul></li>
-      <li><a href="1_2_stepindex.html#index-0">Step index class</a>
+      <li>
+    search center
+
+      <ul>
+        <li><a href="4_1_pbg.html#index-9">principled guess</a>
 </li>
+        <li><a href="4_3_pbg_air.html#index-3">when n0 not clad</a>
+</li>
+      </ul></li>
+      <li>
+    sqrZfrom
+
+      <ul>
+        <li><a href="4_3_pbg_air.html#index-4">outer region mismatch</a>
+</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="1_2_stepindex.html#index-0">Step index class</a>
+</li>
       <li>
     step-index fiber
 
@@ -798,6 +901,10 @@ document.write(`
 
 <h2 id="T">T</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="4_1_pbg.html#index-5">thermal perturbation</a>
+</li>
+  </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="2_1_bragg_exact.html#index-9">transfer matrix method</a>
 </li>
