@@ -11,7 +11,7 @@ Z-plane, nondimensional) known to contain that mode at wl_min
 (found by a preliminary search at a single wavelength, e.g. following
 technique of starting from `A.sqrZfrom(.9998 * A.k * A.n_core)`
 and narrowing down from there, or just trial and error as in
-demos/pbg/PBG_mode.py). For convenience, we use 'LP01' for the
+demos/pbg/pbg_mode.py). For convenience, we use 'LP01' for the
 fundamental mode and 'LP11' is the next higher-order mode (even
 thought this is not a step-index fiber).
 
