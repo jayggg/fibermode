@@ -673,23 +673,51 @@ class ModeSolver:
 
         PARAMETERS
         ----------
-        a: radius of the helix (bend radius) in meters
+        a: radius of the helix (bend radius), in the same physical
+        length units as self.L (e.g. meters)
 
-        b: pitch of the helix (can be 0) in meters
+        b: pitch of the helix (can be 0), in the same physical length
+        units as self.L
 
-        center, radius: of circle in complex plane to search for eigenvalues
+        center, radius: of circle in the complex Z² plane to search for
+        eigenvalues, where Z² = L²(k²n₀² - β²) is the same nondimensional
+        eigenvalue reported by the other solvers of this class (see
+        sqrZfrom & betafrom). Guided modes have Z² < 0. Note that this
+        circle is then approximately mapped to another in the code (a mapping
+        which should be harmless if the radius is small)
 
         p: Lagrange finite element degree
 
         npts, nspan, feastkwargs: number of quadrature points, intial span
         dimension, and further keyword arguments to pass to feast eigensolver.
+
+        OUTPUTS:  Z2, y, yl, P
+
+        Z2: nondimensional eigenvalues Z² (use betafrom(Z2) for physical β)
+        y: right eigenspan
+        yl: left eigenspan
+        P: the spectral projector object used in the computation
         """
 
         A, B, C, X = self.guidedhelicalsystem(a, b, p=p)
+
+        # The assembled quadratic eigenproblem is posed in the
+        # nondimensional propagation constant  Λ = L β,  whereas this
+        # class reports  Z² = (L k n₀)² - Λ².  The given Z²-plane
+        # contour is therefore mapped to a circle in the Λ-plane: the
+        # center maps exactly, while the radius is mapped by the
+        # linearization |dΛ/dZ²| = 1/(2|Λ|). Feast only needs a contour
+        # enclosing the wanted eigenvalues (not one of any particular
+        # shape), so approximating the exact image of the Z²-circle
+        # this way is harmless at the small radii typically used.
+        Lkn0sqr = (self.L * self.k * self.n0)**2
+        lamctr = np.sqrt(complex(Lkn0sqr - center))
+        lamrad = radius / (2 * abs(lamctr))
+
         P = SpectralProjNGPoly([A, B, C],
                                X,
-                               radius=radius,
-                               center=center,
+                               radius=lamrad,
+                               center=lamctr,
                                npts=npts,
                                within=None,
                                rhoinv=0.0,
@@ -700,29 +728,36 @@ class ModeSolver:
         Yl = Y.create()
         Y.setrandom(seed=seed)
         Yl.setrandom(seed=seed)
-        ews, Y, hist, Yl = P.feast(Y, Yl=Yl, hermitian=False, **feastkwargs)
+        lam, Y, hist, Yl = P.feast(Y, Yl=Yl, hermitian=False, **feastkwargs)
         if not hist[-1]:
             warn('*** Feast iterations did not converge')
         y = P.first(Y)
         yl = P.last(Yl)
 
-        bdrnrm = self.boundarynorm(y)
-        if np.max(bdrnrm) > 1e-6:
-            warn('*** Mode boundary L2 norm > 1e-6!')
+        Z2 = Lkn0sqr - lam**2
+        print('Results:\n Z²:', Z2)
+        print(' beta:', self.betafrom(Z2))
 
-        print('Results:\n ews:', ews)
-
-        return ews, y, yl, P
+        return Z2, y, yl, P
 
     def guidedhelicalsystem(self, a, b, p=4):
         """
         Output A, B, C operators on finite element space X so that the
         guided helical mode u is an eigenfuntion of the quadratic eigenvalue
-        problem (A + β B + β² C) u = 0  in X.
+        problem (A + Λ B + Λ² C) u = 0  in X, where Λ = L β is the
+        nondimensional propagation constant (β being the physical one),
+        consistent with the nondimensional cross section in self.mesh.
+
+        Inputs a, b are physical lengths (in the units of self.L) and
+        are nondimensionalized here, so that the helix parameterization
+        Phi = gamma + x N + y B combines them consistently with the
+        nondimensional cross section coordinates x, y of self.mesh.
         """
         if self.ngspmlset:
             raise RuntimeError('Do not use with ngsolve pml.')
 
+        a = a / self.L
+        b = b / self.L
         ll = sqrt(a**2 + b**2)
         T = 1 / ll * CF((
             -a * sin(ng.z / ll),  # tangent of helical centerline
@@ -753,8 +788,9 @@ class ModeSolver:
         with ng.TaskManager():
 
             A = ng.BilinearForm(X)
-            A += (J * (C_inv[:2, :2] * grad(u)) * grad(v) -
-                  J * self.k**2 * self.index**2 * u * v) * dx(bonus_intorder=5)
+            A += (J * (C_inv[:2, :2] * grad(u)) * grad(v) - J *
+                  (self.L * self.k)**2 * self.index**2 * u * v) * dx(
+                      bonus_intorder=5)
             A.Assemble()
             B = ng.BilinearForm(X)
             B += J * 1j * (u * d[:2] * grad(v) -
